@@ -1,0 +1,4 @@
+---
+# Główny playbook: importuje playbooki warstw (konstytucja, zasada I).
+- name: Warstwa bazowa
+  ansible.builtin.import_playbook: common.yml

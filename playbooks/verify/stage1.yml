@@ -1,0 +1,20 @@
+---
+# Testy akceptacyjne etapu 1 (R13) — kontrakt: specs/001-etap1-fundament/contracts/verification.md
+# Nie jest częścią site.yml i nie zmienia trwałego stanu węzłów.
+#   ansible-playbook playbooks/verify/stage1.yml             # wszystkie testy
+#   ansible-playbook playbooks/verify/stage1.yml --tags us4  # jedna historyjka
+- name: US1 — adresacja i rozwiązywanie nazw
+  ansible.builtin.import_playbook: stage1/us1.yml
+  tags: [us1]
+
+- name: US3 — bezpieczny dostęp administracyjny
+  ansible.builtin.import_playbook: stage1/us3.yml
+  tags: [us3]
+
+- name: US4 — firewall z domyślną odmową
+  ansible.builtin.import_playbook: stage1/us4.yml
+  tags: [us4]
+
+- name: US5 — czas, strefa czasowa i aktualizacje
+  ansible.builtin.import_playbook: stage1/us5.yml
+  tags: [us5]

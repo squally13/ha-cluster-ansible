@@ -1,0 +1,82 @@
+---
+- name: US3 — konfiguracja SSH i uprawnienia na każdym węźle
+  hosts: all
+  gather_facts: false
+  vars:
+    us3_control_address: "{{ hostvars[groups['ops'][0]].ansible_host }}"
+    us3_mgmt_source: 10.0.2.2
+    us3_expected_allowusers: >-
+      {{ (['admin@' ~ common_ssh_host_address] if inventory_hostname in groups['ops']
+          else ['admin@' ~ us3_control_address]) + ['vagrant@' ~ us3_mgmt_source] }}
+  tasks:
+    - name: US3.1 Sprawdź sudo konta admin
+      ansible.builtin.command: id -u
+      become: true
+      register: us3_id
+      changed_when: false
+      failed_when: us3_id.stdout != '0'
+
+    - name: SC-004 Odczytaj efektywną konfigurację sshd
+      ansible.builtin.command: sshd -T
+      become: true
+      register: us3_sshd
+      changed_when: false
+
+    - name: SC-004 Sprawdź efektywną konfigurację sshd
+      vars:
+        us3_lines: "{{ us3_sshd.stdout_lines }}"
+        us3_allowusers: >-
+          {{ us3_lines | select('match', '^allowusers ') | map('regex_replace', '^allowusers ', '')
+             | map('split') | flatten | sort }}
+      ansible.builtin.assert:
+        that:
+          - "'passwordauthentication no' in us3_lines"
+          - "'kbdinteractiveauthentication no' in us3_lines"
+          - "'permitrootlogin no' in us3_lines"
+          - us3_allowusers == (us3_expected_allowusers | sort)
+        fail_msg: >-
+          {{ inventory_hostname }}: allowusers={{ us3_allowusers }},
+          oczekiwane={{ us3_expected_allowusers | sort }}
+        quiet: true
+
+    - name: US3.4 Sprawdź blokadę hasła konta vagrant
+      ansible.builtin.command: passwd -S vagrant
+      become: true
+      register: us3_vagrant_passwd
+      changed_when: false
+      failed_when: us3_vagrant_passwd.stdout.split()[1] != 'L'
+
+- name: US3 — próby logowania z ops na pozostałe węzły
+  hosts: ops
+  gather_facts: false
+  vars:
+    us3_ssh_opts: >-
+      -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+    us3_targets: "{{ groups['all'] | difference(groups['ops']) }}"
+  tasks:
+    - name: US3.2 Logowanie hasłem jest niedostępne (serwer oferuje tylko publickey)
+      ansible.builtin.command: >-
+        ssh {{ us3_ssh_opts }} -o PreferredAuthentications=password -o PubkeyAuthentication=no
+        admin@{{ hostvars[item].ansible_host }} true
+      loop: "{{ us3_targets }}"
+      register: us3_password_login
+      changed_when: false
+      failed_when: >-
+        us3_password_login.rc == 0 or
+        'Permission denied (publickey)' not in us3_password_login.stderr
+
+    - name: US3.3 Logowanie jako root kluczem labu jest odrzucane
+      ansible.builtin.command: >-
+        ssh {{ us3_ssh_opts }} -i ~/.ssh/id_ed25519 root@{{ hostvars[item].ansible_host }} true
+      loop: "{{ us3_targets }}"
+      register: us3_root_login
+      changed_when: false
+      failed_when: us3_root_login.rc == 0
+
+    - name: US3.4 Logowanie jako vagrant z sieci labu jest odrzucane
+      ansible.builtin.command: >-
+        ssh {{ us3_ssh_opts }} -i ~/.ssh/id_ed25519 vagrant@{{ hostvars[item].ansible_host }} true
+      loop: "{{ us3_targets }}"
+      register: us3_vagrant_login
+      changed_when: false
+      failed_when: us3_vagrant_login.rc == 0

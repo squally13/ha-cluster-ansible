@@ -1,0 +1,7 @@
+---
+- name: Warstwa bazowa — rola common na wszystkich węzłach
+  hosts: all
+  become: true
+  roles:
+    - role: common
+      tags: [common]

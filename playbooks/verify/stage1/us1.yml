@@ -1,0 +1,39 @@
+---
+- name: US1 — adresacja i rozwiązywanie nazw
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: US1.2 Sprawdź łączność Ansible z węzłem
+      ansible.builtin.ping:
+
+    - name: US1.3 Sprawdź adres węzła w sieci labu
+      ansible.builtin.assert:
+        that:
+          - ansible_host is match('^192\.168\.56\.[0-9]{1,3}$')
+          - ansible_host in ansible_all_ipv4_addresses
+        fail_msg: "{{ inventory_hostname }}: {{ ansible_host }} spoza 192.168.56.0/24 lub brak na interfejsach"
+        quiet: true
+
+    - name: US1.4 Rozwiąż nazwy pozostałych węzłów
+      ansible.builtin.command: getent hosts {{ item }}
+      loop: "{{ groups['all'] | difference([inventory_hostname]) }}"
+      register: us1_getent_peers
+      changed_when: false
+      failed_when: >-
+        us1_getent_peers.rc != 0 or
+        (us1_getent_peers.stdout.split() | first | default('')) != hostvars[item].ansible_host
+
+    - name: US1.4 Rozwiąż własną nazwę hosta
+      ansible.builtin.shell: getent hosts "$(hostname)"
+      register: us1_getent_self
+      changed_when: false
+      failed_when: false
+
+    - name: US1.4 Sprawdź, że własna nazwa wskazuje adres labu, nie 127.0.1.1
+      ansible.builtin.assert:
+        that:
+          - us1_getent_self.rc == 0
+          - (us1_getent_self.stdout.split() | first | default('')) == ansible_host
+          - "'127.0.1.1' not in us1_getent_self.stdout"
+        fail_msg: "{{ inventory_hostname }}: getent hosts $(hostname) → '{{ us1_getent_self.stdout }}'"
+        quiet: true
