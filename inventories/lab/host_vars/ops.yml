@@ -1,0 +1,3 @@
+---
+# ops jest węzłem sterującym — Ansible działa na nim lokalnie, bez SSH do samego siebie (R5, R8)
+ansible_connection: local

@@ -1,0 +1,8 @@
+---
+# Adres wirtualny klastra (wpis „vip” w /etc/hosts; VIP powstaje w etapie 4)
+common_vip_address: 192.168.56.10
+
+# Adres hosta Windows w sieci host-only — jedyne źródło SSH do ops.
+# Jak sprawdzić: na hoście `ipconfig` → karta „VirtualBox Host-Only Network” → „IPv4 Address”.
+# Jeśli jest inny niż 192.168.56.1 — zmień tutaj (i tylko tutaj).
+common_ssh_host_address: 192.168.56.1
