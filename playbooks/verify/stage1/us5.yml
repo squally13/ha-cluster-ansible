@@ -54,6 +54,28 @@
       changed_when: false
       failed_when: us5_needrestart.rc != 0 or 'NEEDRESTART-KSTA:' not in us5_needrestart.stdout
 
+    - name: US5.3 Odczytaj stan usług systemowych
+      ansible.builtin.service_facts:
+
+    - name: US5.3 Sprawdź, że okresowe aktualizacje APT faktycznie działają
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services[item].status != 'masked'
+        fail_msg: "{{ inventory_hostname }}: {{ item }} jest zamaskowana"
+        quiet: true
+      loop:
+        - apt-daily.service
+        - apt-daily-upgrade.service
+
+    - name: US5.3 Sprawdź aktywne timery aktualizacji APT
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+      loop:
+        - apt-daily.timer
+        - apt-daily-upgrade.timer
+      register: us5_apt_timers
+      failed_when: us5_apt_timers.status.ActiveState != 'active'
+
     - name: US5.5 Sprawdź narzędzia bazowe
       ansible.builtin.shell: command -v vim htop curl rsync tcpdump
       args:

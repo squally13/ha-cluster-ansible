@@ -33,3 +33,7 @@ common_vip_address: 192.168.56.10
 
 # Jednorazowa pełna aktualizacja przy pierwszej konfiguracji (FR-012, R11)
 common_initial_upgrade: true
+# Dysk(i) instalacji GRUB ustawiane przed jednorazową aktualizacją (obraz Bento pamięta dysk z
+# maszyny budującej). Pusta lista = nie zmieniaj.
+common_grub_install_devices:
+  - /dev/sda

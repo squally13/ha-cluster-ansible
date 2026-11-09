@@ -156,6 +156,9 @@ zapisywalnym dla wszystkich.
   „VirtualBox Host-Only Network” → „IPv4 Address”. *Naprawa*: wpisz ten adres w
   `inventories/lab/group_vars/all/main.yml`, wejdź przez `vagrant ssh ops` + `sudo -iu admin` i
   uruchom `ansible-playbook playbooks/site.yml --limit ops`.
+- *Objaw*: przy pierwszym połączeniu, po `Warning: Permanently added '192.168.56.5'`, terminal
+  nie pokazuje znaku zachęty. *Naprawa*: przerwij (Ctrl+C) i połącz się ponownie — klucz hosta
+  jest już zapisany; alternatywnie `vagrant ssh ops` + `sudo -iu admin`.
 - *Objaw*: `[WARNING]: Found both group and host with same name: ops`. Celowe (grupa `ops` z
   hostem `ops`) — ostrzeżenie nieszkodliwe.
 - *Objaw*: `UNREACHABLE ... Permission denied (publickey)`. *Sprawdzenie* [ops]:
@@ -195,6 +198,13 @@ ansible web1 -a "getent hosts db1"     # 192.168.56.31   db1
   konfigurację; jednorazowa pełna aktualizacja wykona się, bo znacznik
   `/var/lib/ha-homelab/initial-upgrade.done` powstaje dopiero po jej sukcesie.
 
+- *Objaw*: `dpkg: error processing package grub-pc` / `You must correct your GRUB install
+  devices`. *Przyczyna*: obraz pamięta dysk GRUB-a z maszyny budującej. *Naprawa*: rola ustawia
+  `grub-pc/install_devices` przed pierwszą aktualizacją (`common_grub_install_devices`,
+  domyślnie `/dev/sda`); jeśli dysk VM ma inną nazwę — nadpisz zmienną w `group_vars`.
+- *Objaw*: `Unable to start service apt-daily.timer`. *Przyczyna*: usługi `apt-daily*`
+  zamaskowane w obrazie; rola je odmaskowuje — sprawdź, czy nie zmieniono `updates.yml`.
+
 ## Krok 6. Test idempotencji (US2)
 
 **Co**: drugi przebieg nie może niczego zmienić; tryb sprawdzania nie pokazuje różnic; ręczny
@@ -218,7 +228,7 @@ Test dryfu (US2.3) [PS]:
 vagrant ssh lb1 -c "sudo sed -i '1i # dryf' /etc/ssh/sshd_config"
 ```
 
-[ops]: `ansible-playbook playbooks/site.yml` → `lb1 changed=1` (zadanie „Wygeneruj konfigurację
+[ops]: `ansible-playbook playbooks/site.yml` → `lb1 changed=2` (zadanie „Wygeneruj konfigurację
 serwera SSH” + handler `Restart ssh`); kolejny przebieg → `changed=0` na 7 hostach.
 
 **Typowe problemy**:

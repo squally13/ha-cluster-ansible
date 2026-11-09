@@ -10,7 +10,8 @@
     owner: root
     group: root
     mode: "0644"
-    validate: chronyd -p -f %s
+  # Bez validate: profil AppArmor chronyd blokuje odczyt pliku tymczasowego Ansible
+  # (docs/notes.md). Walidacja w handlerze, przed restartem — jak dla nftables.
   notify: restart chrony
 
 - name: Włącz i uruchom chrony

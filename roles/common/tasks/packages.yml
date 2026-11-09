@@ -11,6 +11,20 @@
     path: /var/lib/ha-homelab/initial-upgrade.done
   register: common_initial_upgrade_marker
 
+# Obraz Bento pamięta dysk GRUB-a z maszyny, na której go zbudowano; każdy klon ma dysk o innym
+# numerze seryjnym, więc nieinteraktywna aktualizacja grub-pc kończy się błędem. Wskazujemy dysk
+# rozruchowy przed pierwszą aktualizacją; postinst grub-pc zapisuje go potem w trwałej postaci.
+- name: Wskaż dysk rozruchowy dla aktualizacji GRUB
+  ansible.builtin.debconf:
+    name: grub-pc
+    question: grub-pc/install_devices
+    value: "{{ common_grub_install_devices | join(', ') }}"
+    vtype: multiselect
+  when:
+    - common_initial_upgrade | bool
+    - not common_initial_upgrade_marker.stat.exists
+    - common_grub_install_devices | length > 0
+
 - name: Wykonaj jednorazową pełną aktualizację systemu
   ansible.builtin.apt:
     upgrade: dist

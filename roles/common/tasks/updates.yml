@@ -23,6 +23,16 @@
     group: root
     mode: "0644"
 
+# Obraz Bento maskuje usługi apt-daily (unika blokad apt przy budowie obrazu) — bez tego
+# timery nie startują, a poprawki bezpieczeństwa nigdy by się nie instalowały.
+- name: Odmaskuj usługi okresowych aktualizacji APT
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    masked: false
+  loop:
+    - apt-daily.service
+    - apt-daily-upgrade.service
+
 - name: Włącz timery aktualizacji APT
   ansible.builtin.systemd_service:
     name: "{{ item }}"
