@@ -13,7 +13,7 @@ Desktop). Pytanie Q1 ze spec; decyzje R1 i R14 z research.
 ## Decyzja
 
 - Vagrant 2.4.x i VirtualBox 7.x uruchamiane **na Windowsie** (PowerShell).
-  Zweryfikowane wersje: VirtualBox `7.2.16r174877`; Vagrant — *do uzupełnienia po instalacji*.
+  Zweryfikowane wersje: VirtualBox `7.2.16r174877`; Vagrant `2.4.9`.
 - Repozytorium leży na NTFS (`C:\Users\<user>\projects\ha-homelab`), bo folder współdzielony
   VirtualBoxa nie obsługuje ścieżek `\\wsl$\...`. `.gitattributes` wymusza LF.
 - Najpierw praca z włączonym Hyper-V (VirtualBox przez Windows Hypervisor Platform). Jeśli czas

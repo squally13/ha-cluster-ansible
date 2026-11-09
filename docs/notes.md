@@ -47,8 +47,8 @@ Numery uzupełnić po założeniu Issues w GitHubie.
   `pre-commit-hooks v6.0.0`, `actions/checkout v7.0.1`, `actions/setup-python v7.1.0`.
   Decyzja R7 zmieniona względem „docelowo 2.20” — research.md zaktualizowany.
 - **(c) Wersje na hoście**: `VBoxManage --version` → `7.2.16r174877` (VirtualBox 7.x — OK).
-  **Vagrant nie jest zainstalowany** — wymagana instalacja Vagranta 2.4.x przed T028; wersję
-  dopisać tutaj i do ADR 0002.
+  Vagrant początkowo niezainstalowany; po instalacji `vagrant --version` → `Vagrant 2.4.9`
+  (2.4.x — OK).
 
 ### 2026-11-09 — testy akceptacyjne przed implementacją
 
