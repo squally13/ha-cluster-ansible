@@ -20,7 +20,7 @@ pilnują `pre-commit` i GitHub Actions, a scenariusze akceptacyjne automatyzuje 
 **Language/Version**: YAML (Ansible), Jinja2, Ruby (Vagrantfile), Bash (bootstrap), Python 3.13
 (z Debiana 13 — interpreter Ansible i skrypt testu połączeń)
 
-**Primary Dependencies**: ansible-core (przypięty, docelowo 2.20.x — R7), kolekcje
+**Primary Dependencies**: ansible-core 2.21.6 (przypięty — R7, weryfikacja w `docs/notes.md`), kolekcje
 `ansible.posix`, `community.general`; Vagrant 2.4.x; VirtualBox 7.x; obraz `bento/debian-13`
 (przypięta wersja — R2); nftables, chrony, openssh-server, unattended-upgrades, needrestart
 
