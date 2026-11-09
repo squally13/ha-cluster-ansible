@@ -1,0 +1,7 @@
+---
+# Kolekcje Ansible — dokładne wersje (konstytucja: zasada I, R7)
+collections:
+  - name: ansible.posix
+    version: "2.2.2"
+  - name: community.general
+    version: "14.0.0"

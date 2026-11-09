@@ -1,0 +1,9 @@
+# Para kluczy labu i inne artefakty lokalne (R5) — nigdy w Git
+.lab/
+# Stan Vagranta
+.vagrant/
+# Hasło do Ansible Vault (R15, konstytucja: zasada IV)
+.vault_pass
+# Artefakty Ansible i Pythona
+*.retry
+__pycache__/

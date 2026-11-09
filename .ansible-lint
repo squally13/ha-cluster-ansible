@@ -1,0 +1,14 @@
+---
+# Konfiguracja ansible-lint (R12) — profil produkcyjny, bez wyjątków bez uzasadnienia
+profile: production
+
+exclude_paths:
+  - .lab/
+  - .vagrant/
+  - specs/
+  - .specify/
+  - .claude/
+  - .github/
+
+# Kolekcje instaluje CI / pre-commit z requirements.yml
+offline: false
