@@ -1,0 +1,11 @@
+# Zarządzane przez Ansible — nie edytuj ręcznie
+# Źródło: inventories/lab/hosts.yml. Celowo bez wpisu 127.0.1.1 (R4).
+127.0.0.1	localhost
+::1	localhost ip6-localhost ip6-loopback
+ff02::1	ip6-allnodes
+ff02::2	ip6-allrouters
+
+{% for host in groups['all'] %}
+{{ hostvars[host].ansible_host }}	{{ host }}
+{% endfor %}
+{{ common_vip_address }}	vip

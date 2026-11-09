@@ -1,0 +1,37 @@
+---
+- name: Zainstaluj pakiety bazowe
+  ansible.builtin.apt:
+    name: "{{ common_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Sprawdź znacznik pierwszej pełnej aktualizacji
+  ansible.builtin.stat:
+    path: /var/lib/ha-homelab/initial-upgrade.done
+  register: common_initial_upgrade_marker
+
+- name: Wykonaj jednorazową pełną aktualizację systemu
+  ansible.builtin.apt:
+    upgrade: dist
+    update_cache: true
+  when:
+    - common_initial_upgrade | bool
+    - not common_initial_upgrade_marker.stat.exists
+
+- name: Utwórz katalog stanu ha-homelab
+  ansible.builtin.file:
+    path: /var/lib/ha-homelab
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Zapisz znacznik pierwszej pełnej aktualizacji
+  ansible.builtin.copy:
+    dest: /var/lib/ha-homelab/initial-upgrade.done
+    content: "Pełna aktualizacja wykonana przez rolę common — usuń plik, aby powtórzyć.\n"
+    owner: root
+    group: root
+    mode: "0644"
+  when: common_initial_upgrade | bool

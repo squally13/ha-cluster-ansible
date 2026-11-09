@@ -1,0 +1,20 @@
+---
+- name: Ustaw strefę czasową
+  community.general.timezone:
+    name: "{{ common_timezone }}"
+
+- name: Skonfiguruj chrony
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: /etc/chrony/chrony.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: chronyd -p -f %s
+  notify: restart chrony
+
+- name: Włącz i uruchom chrony
+  ansible.builtin.service:
+    name: chrony
+    enabled: true
+    state: started

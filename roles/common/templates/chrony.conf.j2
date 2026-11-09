@@ -1,0 +1,12 @@
+# Zarządzane przez Ansible — nie edytuj ręcznie
+{% for pool in common_ntp_pools %}
+pool {{ pool }} iburst maxpoll 6
+{% endfor %}
+
+# Korekta skokowa przy każdym odchyleniu > 1 s (wybudzenie laptopa — US5.2, R10)
+makestep 1 -1
+
+driftfile /var/lib/chrony/chrony.drift
+rtcsync
+leapsectz right/UTC
+logdir /var/log/chrony

@@ -1,0 +1,34 @@
+#!/usr/sbin/nft -f
+# Zarządzane przez Ansible — nie edytuj ręcznie
+# Kontrakt rozszerzania: specs/001-etap1-fundament/contracts/firewall-dropin.md
+# Plik ładowany jedną transakcją — nie ma stanu pośredniego (FR-018).
+
+flush ruleset
+
+table inet filter {
+	chain input {
+		type filter hook input priority 0; policy drop;
+
+		iif "lo" accept
+		ct state established,related accept
+		ct state invalid drop
+
+		iifname "{{ ansible_default_ipv4.interface }}" tcp dport 22 accept comment "common: kanal zarzadzania Vagranta"
+{% if inventory_hostname in groups['ops'] %}
+		ip saddr {{ common_ssh_host_address }} tcp dport 22 accept comment "common: SSH z hosta do ops"
+{% else %}
+		ip saddr {{ common_control_node_address }} tcp dport 22 accept comment "common: SSH z ops"
+{% endif %}
+	}
+
+	chain forward {
+		type filter hook forward priority 0; policy drop;
+	}
+
+	chain output {
+		type filter hook output priority 0; policy accept;
+	}
+}
+
+# Fragmenty reguł kolejnych ról (tylko polecenia "add rule inet filter input ...")
+include "/etc/nftables.d/*.nft"

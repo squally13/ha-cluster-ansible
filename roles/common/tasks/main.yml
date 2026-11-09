@@ -1,0 +1,29 @@
+---
+# Kolejność zadań wyklucza utratę dostępu (FR-018): firewall przed ssh, restarty w handlerach na końcu.
+- name: Pakiety bazowe i jednorazowa aktualizacja
+  ansible.builtin.import_tasks: packages.yml
+  tags: [packages]
+
+- name: Konta użytkowników
+  ansible.builtin.import_tasks: users.yml
+  tags: [users]
+
+- name: Nazwa hosta i /etc/hosts
+  ansible.builtin.import_tasks: hosts.yml
+  tags: [hosts]
+
+- name: Strefa czasowa i synchronizacja czasu
+  ansible.builtin.import_tasks: time.yml
+  tags: [time]
+
+- name: Firewall nftables
+  ansible.builtin.import_tasks: firewall.yml
+  tags: [firewall]
+
+- name: Konfiguracja SSH
+  ansible.builtin.import_tasks: ssh.yml
+  tags: [ssh]
+
+- name: Automatyczne aktualizacje bezpieczeństwa
+  ansible.builtin.import_tasks: updates.yml
+  tags: [updates]
