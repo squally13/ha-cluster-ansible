@@ -161,6 +161,21 @@ Testy ręczne:
 - R9: w logu aktualizacji `ssh.socket is a disabled or a static unit not running` — Debian 13
   używa `ssh.service`, handler `Restart ssh` jest właściwy (potwierdzone dryfem US2.3).
 
+### 2026-11-10 — test CI i ochrona `main` (T057)
+
+| Scenariusz | Wynik |
+|---|---|
+| US6.1 push `6b95e8d` | job `lint` zielony (1 min 1 s) |
+| US6.3 `git commit` z zadaniem bez `name` | odrzucony przez hook: `name[missing]` `roles/common/tasks/hosts.yml:14` |
+| US6.2 `git commit --no-verify` + push (`68b8731`) | job `lint` czerwony; log: `##[error]All tasks should be named.` `roles/common/tasks/hosts.yml:14` |
+| Blokada merge | draft PR #9 → `main`: `mergeStateStatus: BLOCKED` |
+| Cofnięcie (`git revert`) + push | `push` i `pull_request` zielone; PR #9 `CLEAN` |
+
+- Ochrona `main` (klasyczna reguła): wymagany PR z **0** zatwierdzeń (jedyny autor nie może
+  zatwierdzić własnego PR), wymagany check `lint`, bez obejścia dla administratora, bez force
+  push i usuwania. Szczegóły w tutorialu, sekcja „Test CI”.
+- Draft PR #9 zostaje — w T069 dostanie pełny opis.
+
 ### Pozycje do sprawdzenia przy pierwszym uruchomieniu
 
 - ~~R9 socket activation~~ — sprawdzone: `ssh.service`.

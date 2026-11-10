@@ -218,7 +218,7 @@ US5.4.
 
 Pliki konfiguracji lintu i CI powstają w Phase 1 (T011–T014, T015), żeby lint obejmował wszystkie commity od początku.
 
-- [ ] T057 [US6] Wypchnij gałąź `001-etap1-fundament`, zweryfikuj zielony job; wypchnij commit z celowym błędem (US6.2) → czerwony job ze wskazaniem pliku i linii, potem go cofnij; włącz w GitHubie ochronę gałęzi `main` wymagającą statusu `lint` i opisz ustawienie w `docs/stages/01-fundament.md`
+- [X] T057 [US6] Wypchnij gałąź `001-etap1-fundament`, zweryfikuj zielony job; wypchnij commit z celowym błędem (US6.2) → czerwony job ze wskazaniem pliku i linii, potem go cofnij; włącz w GitHubie ochronę gałęzi `main` wymagającą statusu `lint` i opisz ustawienie w `docs/stages/01-fundament.md`
 
 **Checkpoint**: lint chroni `main`.
 
