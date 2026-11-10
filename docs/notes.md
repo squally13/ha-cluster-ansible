@@ -20,16 +20,18 @@ Dziennik prowadzony od pierwszego dnia (konstytucja, zasada VI). Z wpisów powst
 
 | Issue | Historyjka |
 |---|---|
-| #? | US1 — Odtworzenie środowiska od zera |
-| #? | US2 — Idempotentna konfiguracja bazowa |
-| #? | US3 — Bezpieczny dostęp administracyjny |
-| #? | US4 — Firewall z domyślną odmową |
-| #? | US5 — Czas, strefa czasowa i aktualizacje |
-| #? | US6 — Automatyczna kontrola jakości kodu |
-| #? | US7 — Dokumentacja etapu jako tutorial |
-| #? | Etap 1: zamknięcie etapu |
+| #1 | US1 — Odtworzenie środowiska od zera |
+| #2 | US2 — Idempotentna konfiguracja bazowa |
+| #3 | US3 — Bezpieczny dostęp administracyjny |
+| #4 | US4 — Firewall z domyślną odmową |
+| #5 | US5 — Czas, strefa czasowa i aktualizacje |
+| #6 | US6 — Automatyczna kontrola jakości kodu |
+| #7 | US7 — Dokumentacja etapu jako tutorial |
+| #8 | Etap 1: zamknięcie etapu |
 
-Numery uzupełnić po założeniu Issues w GitHubie.
+Issues mają label `etap-1` i treść skopiowaną ze `spec.md`. Tablica: GitHub Project
+[„HA cluster — Etap 1: fundament”](https://github.com/users/squally13/projects/2), podpięty do
+repo, pole `Status`: Todo / In Progress / Done. Issues zakładane przez `gh` (2026-11-10).
 
 ### 2026-11-09 — weryfikacja pozycji [WERYFIKACJA] z research.md (T007)
 
