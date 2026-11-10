@@ -356,9 +356,31 @@ czerwonym statusie.
 | US6.3 hook lokalny | ten sam błąd, `git commit -am "..."` (bez `--no-verify`) | commit odrzucony przez `ansible-lint` |
 | Blokada merge | PR `001-etap1-fundament` → `main` z czerwonym jobem | przycisk merge nieaktywny: „Required status check lint has not succeeded” |
 
-**Ochrona gałęzi `main`** (GitHub → Settings → Branches → Add branch ruleset / protection rule):
-cel `main`; zaznacz *Require a pull request before merging* i *Require status checks to pass* →
-dodaj check `lint`; *Do not allow bypassing the above settings*.
+**Ochrona gałęzi `main`** (GitHub → Settings → Branches → Add classic branch protection rule),
+wzorzec `main`:
+
+| Ustawienie | Wartość | Dlaczego |
+|---|---|---|
+| *Require a pull request before merging* | tak, wymagane zatwierdzenia: **0** | zmiany tylko przez PR; przy jednym autorze GitHub nie pozwala zatwierdzić własnego PR, więc 1 zatwierdzenie zablokowałoby każdy merge |
+| *Require status checks to pass* | check **`lint`** | czerwony lint blokuje merge (US6.2) |
+| *Require branches to be up to date* | nie | jedna gałąź etapu naraz — wymóg tylko dokładałby przebiegi CI |
+| *Do not allow bypassing the above settings* | tak | reguły obowiązują także właściciela repo |
+| *Allow force pushes* / *Allow deletions* | nie | historia `main` jest niezmienna |
+
+To samo z wiersza poleceń [WSL] (wymaga `gh auth login`):
+
+```bash
+gh api -X PUT repos/<użytkownik>/<repo>/branches/main/protection --input - <<'EOF'
+{"required_status_checks":{"strict":false,"contexts":["lint"]},
+ "enforce_admins":true,
+ "required_pull_request_reviews":{"required_approving_review_count":0},
+ "restrictions":null,"allow_force_pushes":false,"allow_deletions":false}
+EOF
+```
+
+**Weryfikacja**: `gh pr view <nr> --json mergeStateStatus` → `BLOCKED` przy czerwonym `lint`,
+`CLEAN` po poprawce. Check `lint` da się wybrać w ustawieniach dopiero po pierwszym przebiegu
+workflow w repo.
 
 ---
 
