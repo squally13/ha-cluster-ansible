@@ -288,9 +288,12 @@ ansible-playbook playbooks/verify/stage1.yml --tags us4
 ansible db1 -b -a "nft list chain inet filter input"
 ```
 
-**Weryfikacja**: `failed=0`; w wyjściu: `web1 → db1:3306 RESULT=timeout`, lokalnie na `db1`
+**Weryfikacja**: `failed=0`; w wyjściu: `web1 → db1:9999 RESULT=timeout`, lokalnie na `db1`
 `RESULT=connected`, `web1 → db1:22 RESULT=timeout`, `ops → db1:22 RESULT=connected`. Łańcuch
 `input` ma `policy drop` i reguły z komentarzami `common: ...`.
+
+> Od etapu 2 test używa portu **9999** (wcześniej 3306): port 3306 na `db1` zajmuje MySQL i jest
+> celowo otwarty dla `web1`, a 9999 nie otwiera żaden etap.
 
 Testy ręczne [PS]:
 

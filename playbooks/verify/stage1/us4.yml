@@ -21,10 +21,13 @@
         fail_msg: "{{ inventory_hostname }}: nftables.service nie jest włączony"
         quiet: true
 
+# Port 9999 nie jest otwierany przez żaden etap (etap 2, FR-021): od etapu 2 port 3306 na db1 jest
+# zajęty przez MySQL i celowo otwarty dla web1, więc test polityki odmowy nie może go używać.
 - name: US4 — blokada portów (nasłuch testowy na db1)
   hosts: db1
   gather_facts: false
   vars:
+    us4_probe_port: 9999
     us4_db_address: "{{ hostvars['db1'].ansible_host }}"
     us4_probe_hosts: [db1, web1, ops]
     us4_probe: /tmp/ha-homelab-tcp_probe.py
@@ -40,7 +43,7 @@
           loop: "{{ us4_probe_hosts }}"
           changed_when: false
 
-        - name: Uruchom tymczasowy nasłuch TCP 3306 na db1
+        - name: Uruchom tymczasowy nasłuch TCP na db1, port {{ us4_probe_port }}
           ansible.builtin.command:
             argv:
               - python3
@@ -49,7 +52,7 @@
                 import socket, time
                 s = socket.socket()
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                s.bind(("0.0.0.0", 3306))
+                s.bind(("0.0.0.0", {{ us4_probe_port }}))
                 s.listen(16)
                 time.sleep(120)
               - ha-homelab-us4-listener
@@ -57,21 +60,21 @@
           poll: 0
           changed_when: false
 
-        - name: Poczekaj na nasłuch 3306
+        - name: Poczekaj na nasłuch {{ us4_probe_port }}
           ansible.builtin.wait_for:
             host: 127.0.0.1
-            port: 3306
+            port: "{{ us4_probe_port }}"
             timeout: 15
 
-        - name: US4.1 Połączenie web1 → db1:3306 jest porzucane
-          ansible.builtin.command: python3 {{ us4_probe }} {{ us4_db_address }} 3306 3
+        - name: US4.1 Połączenie web1 → db1 jest porzucane, port {{ us4_probe_port }}
+          ansible.builtin.command: python3 {{ us4_probe }} {{ us4_db_address }} {{ us4_probe_port }} 3
           delegate_to: web1
           register: us4_web_to_db
           changed_when: false
           failed_when: "'RESULT=timeout' not in us4_web_to_db.stdout"
 
-        - name: US4.2 Lokalne połączenie na db1:3306 działa
-          ansible.builtin.command: python3 {{ us4_probe }} 127.0.0.1 3306 3
+        - name: US4.2 Lokalne połączenie na db1 działa, port {{ us4_probe_port }}
+          ansible.builtin.command: python3 {{ us4_probe }} 127.0.0.1 {{ us4_probe_port }} 3
           register: us4_db_local
           changed_when: false
           failed_when: "'RESULT=connected' not in us4_db_local.stdout"

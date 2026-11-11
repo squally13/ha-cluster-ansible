@@ -28,7 +28,7 @@ samego pliku), a sonda połączeń to `playbooks/verify/files/tcp_probe.py`.
 | `us3` | US3.4 | z `ops`: `ssh vagrant@<węzeł>` po sieci labu | odrzucenie; `passwd -S vagrant` = `L` |
 | `us3` | US3.1 | `become: true` + `id` | `uid=0` |
 | `us3` | US3.2–3.4, SC-004 | `sshd -T` na **7/7** węzłach (z `ops` włącznie) | `passwordauthentication no`, `kbdinteractiveauthentication no`, `permitrootlogin no`, `allowusers` = oczekiwane wpisy dla węzła — próby logowania same nie wystarczą (brak klucza labu u `root`/`vagrant`) |
-| `us4` | US4.1/4.2 | nasłuch TCP 3306 na `db1`; z `web1` połączenie z timeoutem 3 s; lokalnie na `db1` | `web1`: `timeout`; lokalnie: `connected` |
+| `us4` | US4.1/4.2 | nasłuch TCP 3306 (od etapu 2: **9999** — patrz niżej) na `db1`; z `web1` połączenie z timeoutem 3 s; lokalnie na `db1` | `web1`: `timeout`; lokalnie: `connected` |
 | `us4` | US4.3 | z `web1`: TCP 22 na `db1` (timeout 3 s) | `timeout` |
 | `us4` | US4.5 | `nft list ruleset` vs `systemctl is-enabled nftables` | polityka `drop`, `enabled` |
 | `us5` | US5.1 | `chronyc tracking`: `Leap status: Normal`, \|System time\| | < 0,5 s na każdym węźle (różnica par < 1 s) |
@@ -38,6 +38,12 @@ samego pliku), a sonda połączeń to `playbooks/verify/files/tcp_probe.py`.
 
 Format wyniku testu połączenia (skrypt Python uruchamiany na węźle źródłowym):
 `RESULT=<connected|refused|timeout> HOST=<ip> PORT=<port>`.
+
+## Zmiana od etapu 2
+
+Test US4.1/4.2 używa portu **9999** (`us4_probe_port`) zamiast 3306: od etapu 2 port 3306 na `db1`
+jest zajęty przez MySQL i celowo otwarty dla `web1` (specs/002-etap2-mysql-replikacja, FR-021).
+Port 9999 nie jest otwierany przez żaden etap, więc test dalej dowodzi polityki odmowy.
 
 ## Testy poza playbookiem (ręczne, z hosta — opisane w quickstart)
 
