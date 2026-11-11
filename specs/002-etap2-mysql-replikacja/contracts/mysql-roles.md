@@ -15,11 +15,12 @@ hasła z Vaulta.
 | `repo.yml` | klucz Oracle, plik `sources` z `Signed-By`, `apt_preferences` z dokładną wersją | `mysql`, `mysql-install` | wszystkie `db` |
 | `install.yml` | debconf `root-pass` pusty; pakiety `mysql-server={{ mysql_version }}`, `python3-pymysql`; usługa `enabled` + `started` | `mysql`, `mysql-install` | wszystkie `db` |
 | `config.yml` | `mysqld.cnf` (→ `Restart mysql`), `role.cnf` (→ `Apply mysql role settings`) | `mysql`, `mysql-config` | wszystkie `db` |
+| `role_drift.yml` | po `flush_handlers`: `@@read_only`/`@@super_read_only` zgodne z rolą, przy dryfie → `Apply mysql role settings` | `mysql`, `mysql-config` | wszystkie `db` |
 | `firewall.yml` | `/etc/nftables.d/mysql.nft` (→ `reload firewall` z roli `common`) | `mysql`, `firewall` | wszystkie `db` |
 | `secure.yml` | usunięcie kont anonimowych, `root` spoza `localhost`, bazy `test` | `mysql`, `mysql-accounts` | **tylko `source`** |
 | `accounts.yml` | konta `repl`, `clone`, `app` (hosty z inventory), baza `app` (`no_log`) | `mysql`, `mysql-accounts` | **tylko `source`** |
 
-Po `config.yml`: `meta: flush_handlers` — restart przed operacjami SQL.
+Kolejność w `main.yml`: `assert` → `repo` → `config` (szablony **przed** pakietem) → `install` → `meta: flush_handlers` (restart przed operacjami SQL) → `role_drift` → `firewall` → `secure` → `accounts` → `app`.
 
 **Handlery**:
 
