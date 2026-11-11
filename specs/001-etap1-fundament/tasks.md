@@ -252,8 +252,8 @@ Pliki konfiguracji lintu i CI powstają w Phase 1 (T011–T014, T015), żeby lin
 - [X] T066 Przejrzyj `roles/common/` pod kątem zasady III: każdy plik konfiguracyjny z szablonu z nagłówkiem, brak `lineinfile`, brak bezwarunkowych restartów, `validate:` dla `sshd_config` i `nftables.conf`, każde zadanie z `name` i tagiem; `ansible-lint` bez wyjątków nieuzasadnionych
 - [X] T067 Sprawdź, że w historii Git nie ma `.lab/`, klucza prywatnego ani `.vault_pass` (`git log --all --stat | grep -E "\.lab/|id_ed25519|vault_pass"` → pusto) — zasada IV
 - [X] T068 Uzupełnij `docs/notes.md` o wszystkie problemy z etapu; przenieś powtarzalne do sekcji „Typowe problemy” w `docs/stages/01-fundament.md`
-- [ ] T069 Utwórz pull request `001-etap1-fundament` → `main` z opisem: zakres, PLAY RECAP obu przebiegów z T065, wynik `verify/stage1.yml`, czas z SC-003, linki do ADR 0001–0009 i Issues (`Closes #...`); lint zielony
-- [ ] T070 Poproś osobę trzecią o przejście tutorialu na jej komputerze (SC-008, US7.2); każde miejsce, w którym utknęła, popraw w `docs/stages/01-fundament.md` (może nastąpić po merge — wtedy jako Issue)
+- [X] T069 Utwórz pull request `001-etap1-fundament` → `main` z opisem: zakres, PLAY RECAP obu przebiegów z T065, wynik `verify/stage1.yml`, czas z SC-003, linki do ADR 0001–0009 i Issues (`Closes #...`); lint zielony
+- [ ] T070 Poproś osobę trzecią o przejście tutorialu na jej komputerze (SC-008, US7.2); każde miejsce, w którym utknęła, popraw w `docs/stages/01-fundament.md` (może nastąpić po merge — wtedy jako Issue) → Issue #10
 
 ---
 
