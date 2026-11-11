@@ -121,6 +121,10 @@ kod modułów kolekcji). **[WERYFIKACJA]** = do potwierdzenia w pierwszym przebi
   wykonuje na nim `SET GLOBAL clone_valid_donor_list` (z `role.cnf`) i `CLONE INSTANCE FROM
   'clone'@'<source>':3306 IDENTIFIED BY ... REQUIRE SSL`, czeka na restart serwera i dopiero
   potem konfiguruje replikację. Konto `clone` na źródle z `BACKUP_ADMIN`.
+- **Aktualizacja (implementacja, T008)**: `ansible.mysql` 5.2.0 zawiera moduł **`mysql_clone`**
+  (od 5.1.0): wykonuje `CLONE INSTANCE ... REQUIRE SSL`, czeka na restart odbiorcy i ponowne
+  połączenie oraz na stan końcowy klonu. Używany zamiast `mysql_query` (moduł nie jest
+  idempotentny — wywołanie chronione warunkiem „pusty” lub `reseed`, jak w planie).
 - **Fakty**: jednostka `mysql.service` pakietu ma `RestartForceExitStatus=16` i
   `MYSQLD_PARENT_PID=1` — serwer po klonowaniu restartuje się sam pod systemd. Klon przenosi
   `gtid_executed` źródła, więc auto-pozycjonowanie GTID dociąga wyłącznie zapisy wykonane po
