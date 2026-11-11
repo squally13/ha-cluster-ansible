@@ -22,8 +22,17 @@ Desktop). Pytanie Q1 ze spec; decyzje R1 i R14 z research.
 - Narzędzia lintu (`pre-commit`, `ansible-lint`) uruchamiane z WSL na `/mnt/c/...`, bo
   `ansible-core` nie działa natywnie na Windowsie.
 
-**Pomiar SC-003** (od `vagrant up` do końca pierwszego `site.yml`): ~10,5 min (5 min 44 s +
-4 min 47 s, box w cache, Hyper-V/WSL2 włączone) — próba 1 z 3, kolejne w T065.
+**Pomiar SC-003** (od `vagrant up` do końca pierwszego `site.yml`; box w cache, Hyper-V/WSL2
+włączone, 16 GB RAM):
+
+| Próba | Data | `vagrant up` | `site.yml` przebieg 1 | Razem |
+|---|---|---|---|---|
+| 1/3 | 2026-11-09 | 5 min 44 s | 4 min 47 s | ~10 min 31 s |
+| 2/3 | 2026-11-11 | 5 min 37 s | 5 min 2 s | 10 min 39 s |
+| 3/3 | 2026-11-11 | 6 min 6 s | 4 min 49 s | 10 min 55 s |
+
+Limit 30 min dotrzymany z ~3-krotnym zapasem, więc wyłączanie Hyper-V nie jest potrzebne.
+Pierwsze pobranie boxa dodaje ~1 min (pierwszy `vagrant up`: 6 min 44 s).
 
 ## Rozważane alternatywy
 

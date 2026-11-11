@@ -57,7 +57,7 @@ repo, pole `Status`: Todo / In Progress / Done. Issues zakładane przez `gh` (20
 Kontrakt testów zakłada uruchomienie `playbooks/verify/stage1.yml --tags usN` przed
 implementacją każdej historyjki (oczekiwana porażka). Playbooki weryfikacyjne powstały razem z
 implementacją, zanim środowisko było dostępne (brak Vagranta na hoście), więc przebiegów „przed”
-nie wykonano. Do odnotowania przy pierwszym uruchomieniu: na świeżo postawionych maszynach (po
+nie wykonano (wykonane 2026-11-09 — wpis „testy akceptacyjne przed `site.yml`”). Do odnotowania przy pierwszym uruchomieniu: na świeżo postawionych maszynach (po
 `vagrant up`, przed `site.yml`) uruchomić `verify/stage1.yml` i zapisać tu, które asercje padły
 (oczekiwane: US1.4 — `127.0.1.1`/brak wpisów, US3 — `sshd -T`, US4 — brak `policy drop`,
 US5 — strefa czasowa/konfiguracja aktualizacji).
@@ -155,7 +155,8 @@ Testy ręczne:
 - US4.5 `vagrant reload db1` → `policy drop` i reguła `ip saddr 192.168.56.5 tcp dport 22`.
 - US4.6 `vagrant ssh db1 -c hostname` → `db1`; `vagrant halt web2` / `vagrant up web2` bez błędów.
 - US5.2 `date -s '-2 min'` na `web1` → po ~5 min `Leap status: Normal`, przesunięcie 6 ms.
-  Mieści się w limicie, ale na granicy — przy powtórce zmierzyć dokładnie.
+  Mieści się w limicie, ale na granicy — przy powtórce zmierzyć dokładnie (zmierzone
+  2026-11-11: ok. 3 min, patrz próby 2/3 i 3/3).
 - US5.4 `needrestart -b -k` → `NEEDRESTART-KSTA: 3` na 7/7: jednorazowa aktualizacja
   zainstalowała nowe jądro (`linux-image-6.12.116+deb13`), węzły **nie** zrestartowały się same.
 - R9: w logu aktualizacji `ssh.socket is a disabled or a static unit not running` — Debian 13
@@ -176,10 +177,47 @@ Testy ręczne:
   push i usuwania. Szczegóły w tutorialu, sekcja „Test CI”.
 - Draft PR #9 zostaje — w T069 dostanie pełny opis.
 
+### 2026-11-11 — odtworzenie od zera, próby 2/3 i 3/3 (T065, SC-001–SC-003)
+
+Bez zmian w kodzie ról od próby 1/3 (między próbami tylko dokumentacja i para commitów testu CI
+z T057, która się znosi). Sekwencja: `vagrant destroy -f`, `vagrant up`, na `ops` `site.yml` ×2,
+`site.yml --check --diff`, `verify/stage1.yml`.
+
+| Krok | Próba 1/3 (11-09) | Próba 2/3 | Próba 3/3 |
+|---|---|---|---|
+| `vagrant destroy -f` | — | 28 s | 23 s |
+| `vagrant up` (box w cache) | 5 min 44 s | 5 min 37 s | 6 min 6 s |
+| `site.yml` przebieg 1 | 4 min 47 s | 5 min 2 s | 4 min 49 s |
+| **SC-003** (`up` + przebieg 1) | ~10 min 31 s | **10 min 39 s** | **10 min 55 s** |
+| przebieg 1 | 7/7 `failed=0 unreachable=0`, `changed=23` | to samo | to samo |
+| przebieg 2 | 7/7 `changed=0` | 7/7 `changed=0` | 7/7 `changed=0` |
+| `--check --diff` | 7/7 `changed=0`, brak różnic | to samo | to samo |
+| `verify/stage1.yml` | 7/7 `failed=0` | 7/7 `failed=0` | 7/7 `failed=0` |
+
+SC-001 (3× z rzędu bez błędów) i SC-002 (`changed=0` w drugim przebiegu) spełnione; SC-003 z
+zapasem (limit 30 min). Czasy wpisane do ADR 0002.
+
+Po próbie 3/3:
+
+- **R8**: `nft -c -f /etc/nftables.conf` → rc=0 na 7/7; `/etc/nftables.d/` zawiera
+  `00-common.nft` — `include` z wzorcem zawsze ma dopasowanie.
+- **US5.2 dokładnie**: `date -s '-2 min'` na `web1` (10:11:04 UTC). Dziennik chrony:
+  `Backward time jump detected!` → `Can't synchronise: no selectable sources` → po ~3 min
+  `Selected source ...`, `System clock wrong by 119.998131 seconds`, `System clock was stepped by
+  119.998131 seconds` (`makestep 1 -1`). Odpytywanie co ~21 s: `Leap status : Normal` po 191 s,
+  `Last offset : -119.998 s`. Wynik: ~3 min (≤ 5 min).
+  - Pułapka: przez cały czas desynchronizacji `chronyc tracking` pokazywał
+    `System time : 0.000000001 seconds` — ta wartość nie mierzy błędu zegara po skoku.
+    Poprzedni pomiar („6 ms po ~5 min”) opierał się na niej. Tutorial poprawiony: kryterium to
+    `Leap status : Normal` + `Last offset` ≈ −120 s + wpis `stepped` w dzienniku.
+  - Uboczne: `Received KoD RATE` z serwerów `debian.pool.ntp.org` — 7 węzłów za jednym NAT-em
+    odpytuje te same serwery; na synchronizację nie wpływa. Gdyby się nasiliło: `ops` jako
+    lokalny serwer czasu dla pozostałych węzłów (kandydat na etap 4, Corosync).
+
 ### Pozycje do sprawdzenia przy pierwszym uruchomieniu
 
 - ~~R9 socket activation~~ — sprawdzone: `ssh.service`.
-- R8: `include "/etc/nftables.d/*.nft"` przy pustym katalogu — rola od razu tworzy plik
+- ~~R8~~ — sprawdzone 2026-11-11 (`nft -c` rc=0 na 7/7). Pierwotnie: `include "/etc/nftables.d/*.nft"` przy pustym katalogu — rola od razu tworzy plik
   `/etc/nftables.d/00-common.nft` (sam komentarz), więc wzorzec zawsze ma dopasowanie; sprawdzić
   `nft -c -f /etc/nftables.conf` mimo to.
 - ~~R11~~ — sprawdzone: cache apt nie daje `changed` w drugim przebiegu; `needrestart -b -k`

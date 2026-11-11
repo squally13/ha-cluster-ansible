@@ -197,7 +197,12 @@ ansible web1 -a "getent hosts db1"     # 192.168.56.31   db1
   ponownie `ansible-playbook playbooks/site.yml` — rola jest idempotentna i dokańcza
   konfigurację; jednorazowa pełna aktualizacja wykona się, bo znacznik
   `/var/lib/ha-homelab/initial-upgrade.done` powstaje dopiero po jej sukcesie.
-
+- *Objaw*: po przerwanym przebiegu pliki (`sshd_config`, `nftables.conf`, `chrony.conf`) są
+  już nowe, ale usługi działają na starej konfiguracji, a kolejny przebieg nic nie zmienia.
+  *Przyczyna*: handlery (restart/przeładowanie) nie wykonały się po błędzie, a ponowny przebieg
+  ich nie wywoła, bo pliki są aktualne. *Zapobieganie*: `force_handlers = True` w `ansible.cfg`
+  — działa tylko, gdy `ansible.cfg` jest czytany (krok 4). *Naprawa*: `vagrant reload <węzeł>`
+  albo odtworzenie od zera.
 - *Objaw*: `dpkg: error processing package grub-pc` / `You must correct your GRUB install
   devices`. *Przyczyna*: obraz pamięta dysk GRUB-a z maszyny budującej. *Naprawa*: rola ustawia
   `grub-pc/install_devices` przed pierwszą aktualizacją (`common_grub_install_devices`,
@@ -321,13 +326,27 @@ ansible all -b -a "needrestart -b -k"
 niewymagany) lub `2`/`3` (wymagany — węzeł nie restartuje się sam).
 
 Przesunięcie zegara (US5.2) [PS]: `vagrant ssh web1 -c "sudo date -s '-2 min'"`, odczekaj do
-5 min, [ops] `ansible web1 -a "chronyc tracking"` → `System time` < 0,5 s.
+5 min, [ops] `ansible web1 -a "chronyc tracking"` → `Leap status : Normal` i `Last offset`
+≈ −120 s (zegar przestawiony o całe przesunięcie); w dzienniku
+`ansible web1 -b -a "journalctl -u chrony --since -10min"` widać `Backward time jump detected!`, a
+potem `System clock was stepped by 119.99... seconds`. Pomiar: ok. 3 min.
+
+Uwaga: `System time` w `chronyc tracking` nie nadaje się do tego testu — po skoku zegara chrony
+traci źródła (`Not synchronised`) i do czasu ponownej synchronizacji pokazuje tam ~0 s.
 
 **Typowe problemy**:
 
 - *Objaw*: `Leap status : Not synchronised`. *Przyczyna*: brak dostępu do NTP przez NAT.
   *Sprawdzenie*: `chronyc sources -v`. *Naprawa*: sieć hosta; w ostateczności własny serwer w
   `common_ntp_pools` (`group_vars`).
+- *Objaw*: po dodaniu `validate: chronyd -p -f %s` do szablonu `chrony.conf` — `Could not open
+  .../.source.conf : Permission denied`. *Przyczyna*: profil AppArmor `chronyd` pozwala czytać
+  tylko `/etc/chrony/...`, a nie plik tymczasowy Ansible (`journalctl -k | grep apparmor`).
+  *Naprawa*: tak jak w roli — walidacja w handlerze, przed restartem, na pliku docelowym.
+- *Objaw*: `NEEDRESTART-KSTA: 3` na wszystkich węzłach zaraz po pierwszym przebiegu. Oczekiwane:
+  jednorazowa pełna aktualizacja zainstalowała nowsze jądro, a węzły celowo nie restartują się
+  same ([ADR 0007](../adr/0007-aktualizacje-bez-restartow.md)). Restart ręczny:
+  `vagrant reload <węzeł>` [PS].
 
 ## Krok 10. Pełne odtworzenie od zera
 
@@ -394,8 +413,17 @@ workflow w repo.
 | brak `vboxsf` (dodatki gościa) | 3 |
 | host ma inny adres niż 192.168.56.1 | 4 |
 | `127.0.1.1` w `getent hosts` | 5 |
+| `ssh admin@192.168.56.5` „wisi” przy pierwszym połączeniu | 4 |
 | przerwany przebieg (restart, repozytorium pakietów) | 5 |
+| usługi na starej konfiguracji po przerwanym przebiegu (handlery) | 5 |
+| `grub-pc` / `You must correct your GRUB install devices` | 5 |
+| `Unable to start service apt-daily.timer` | 5 |
 | `changed` w drugim przebiegu | 6 |
 | utrata SSH po zmianie konfiguracji | 7 |
+| `refused` zamiast `timeout` w teście firewalla | 8 |
+| `Leap status : Not synchronised` | 9 |
+| `Permission denied` przy walidacji `chrony.conf` (AppArmor) | 9 |
+| `NEEDRESTART-KSTA: 3` po pierwszym przebiegu | 9 |
+| merge zablokowany / check `lint` niedostępny w ustawieniach | Test CI |
 
 Szczegóły i nowe przypadki: `docs/notes.md`.
