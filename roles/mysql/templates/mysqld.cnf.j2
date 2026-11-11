@@ -1,0 +1,28 @@
+# {{ ansible_managed }}
+# Ustawienia wymagające restartu serwera (research R4). Ustawienia zależne od roli węzła: role.cnf.
+[mysqld]
+pid-file                       = /var/run/mysqld/mysqld.pid
+socket                         = {{ mysql_socket }}
+datadir                        = /var/lib/mysql
+log-error                      = /var/log/mysql/error.log
+
+server_id                      = {{ mysql_server_id }}
+bind_address                   = {{ ansible_host }}
+port                           = {{ mysql_port }}
+# X Protocol (33060) niepotrzebny — domyślnie nasłuchuje na wszystkich adresach
+mysqlx                         = OFF
+
+# Replikacja GTID (ADR 0011) — włączona na każdym węźle, bo każdy może zostać źródłem
+gtid_mode                      = ON
+enforce_gtid_consistency       = ON
+log_bin                        = mysql-bin
+binlog_format                  = ROW
+relay_log                      = relay-bin
+binlog_expire_logs_seconds     = {{ mysql_binlog_expire_logs_seconds }}
+
+# Zasilanie repliki (ADR 0014)
+plugin-load-add                = mysql_clone.so
+
+# Pamięć (FR-006): z vagrant_memory węzła
+innodb_buffer_pool_size        = {{ mysql_innodb_buffer_pool_size }}
+max_connections                = {{ mysql_max_connections }}

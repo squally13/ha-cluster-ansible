@@ -1,6 +1,87 @@
 ---
-# Wypełniane w US1 (specs/002-etap2-mysql-replikacja/tasks.md).
-- name: US1 — testy jeszcze nienapisane
+# US1 — baza danych na obu węzłach db (contracts/verification.md, tabela us1)
+- name: US1 — serwer, wersja, konta i konfiguracja na węzłach db
   hosts: db
+  become: true
   gather_facts: false
-  tasks: []
+  vars_files:
+    - ../../../roles/mysql/defaults/main.yml
+  module_defaults:
+    group/ansible.mysql.all:
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+  tasks:
+    - name: US1.1 Odczytaj stan usług systemowych
+      ansible.builtin.service_facts:
+
+    - name: US1.1 Sprawdź, że usługa mysql działa i startuje z systemem
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['mysql.service'] is defined
+          - ansible_facts.services['mysql.service'].state == 'running'
+          - ansible_facts.services['mysql.service'].status == 'enabled'
+        fail_msg: "{{ inventory_hostname }}: mysql.service nie działa lub nie jest włączony"
+        quiet: true
+
+    - name: US1.1 US1.3 Odczytaj wersję i zmienne serwera
+      ansible.mysql.mysql_query:
+        query: >-
+          SELECT VERSION() AS version, @@server_id AS server_id, @@gtid_mode AS gtid_mode,
+                 @@log_bin AS log_bin, @@enforce_gtid_consistency AS gtid_consistency
+      register: us1_vars
+      changed_when: false
+
+    - name: US1.1 US1.3 Sprawdź wersję, server_id, GTID i dziennik binarny
+      ansible.builtin.assert:
+        that:
+          - us1_vars.query_result[0][0].version == mysql_version.split('-')[0]
+          - us1_vars.query_result[0][0].server_id | int == mysql_server_id | int
+          - us1_vars.query_result[0][0].server_id | int > 0
+          - us1_vars.query_result[0][0].gtid_mode == 'ON'
+          - us1_vars.query_result[0][0].gtid_consistency == 'ON'
+          - us1_vars.query_result[0][0].log_bin | int == 1
+        fail_msg: "{{ inventory_hostname }}: {{ us1_vars.query_result[0][0] }}"
+        quiet: true
+
+    - name: US1.3 Sprawdź, że server_id są unikalne w grupie db
+      ansible.builtin.assert:
+        that:
+          - groups['db'] | map('extract', hostvars, 'mysql_server_id') | unique | length == groups['db'] | length
+        quiet: true
+      run_once: true
+
+    - name: US1.2 Odczytaj konta i bazy
+      ansible.mysql.mysql_query:
+        query:
+          - SELECT user, host, plugin FROM mysql.user
+          - SELECT schema_name AS name FROM information_schema.schemata
+      register: us1_accounts
+      changed_when: false
+
+    - name: US1.2 Sprawdź brak kont anonimowych, root tylko lokalnie przez gniazdo, brak bazy test
+      vars:
+        us1_users: "{{ us1_accounts.query_result[0] }}"
+        us1_root: "{{ us1_users | selectattr('user', 'equalto', 'root') | list }}"
+        us1_schemas: "{{ us1_accounts.query_result[1] | map(attribute='name') | list }}"
+      ansible.builtin.assert:
+        that:
+          - us1_users | selectattr('user', 'equalto', '') | list | length == 0
+          - us1_root | length == 1
+          - us1_root[0].host == 'localhost'
+          - us1_root[0].plugin == 'auth_socket'
+          - "'test' not in us1_schemas"
+        fail_msg: "{{ inventory_hostname }}: konta {{ us1_users }}, bazy {{ us1_schemas }}"
+        quiet: true
+
+- name: US1.5 — serwer bazy tylko na węzłach db
+  hosts: all:!db
+  gather_facts: false
+  tasks:
+    - name: US1.5 Odczytaj stan usług systemowych
+      ansible.builtin.service_facts:
+
+    - name: US1.5 Sprawdź brak usługi mysql
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['mysql.service'] is not defined
+        fail_msg: "{{ inventory_hostname }}: mysql.service nie powinien istnieć poza grupą db"
+        quiet: true

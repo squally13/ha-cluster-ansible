@@ -1,0 +1,7 @@
+# {{ ansible_managed }}
+# Oficjalne repozytorium MySQL (Oracle) — research R1, ADR 0010
+Types: deb
+URIs: {{ mysql_apt_uri }}
+Suites: {{ ansible_facts['distribution_release'] }}
+Components: {{ mysql_apt_component }}
+Signed-By: /etc/apt/keyrings/mysql.asc

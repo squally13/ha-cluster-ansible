@@ -1,3 +1,21 @@
 ---
-# Wypełniane w US1 (specs/002-etap2-mysql-replikacja/tasks.md).
-[]
+- name: Sprawdź rolę węzła bazy
+  ansible.builtin.assert:
+    that:
+      - mysql_role is defined
+      - mysql_role in ['source', 'replica']
+      - mysql_server_id is defined
+      - mysql_server_id | int > 0
+    fail_msg: "{{ inventory_hostname }}: ustaw mysql_role (source|replica) i mysql_server_id > 0 w host_vars"
+    quiet: true
+
+- name: Sprawdź reguły grupy db (jedno źródło, unikalne server_id)
+  ansible.builtin.assert:
+    that:
+      - mysql_source_hosts | length == 1
+      - groups['db'] | map('extract', hostvars, 'mysql_server_id') | unique | length == groups['db'] | length
+    fail_msg: >-
+      Grupa db musi mieć dokładnie jeden host z mysql_role=source (jest: {{ mysql_source_hosts }})
+      i unikalne mysql_server_id.
+    quiet: true
+  run_once: true

@@ -1,3 +1,14 @@
 ---
-# Wypełniane w US4 (specs/002-etap2-mysql-replikacja/tasks.md).
-[]
+# Ustawienia zależne od roli węzła (role.cnf) — po instalacji pakietu i restarcie (main.yml).
+# Kontrola dryfu (ręczne SET GLOBAL) dochodzi w US4 (tasks.md T040).
+- name: Wygeneruj ustawienia roli węzła
+  ansible.builtin.template:
+    src: role.cnf.j2
+    dest: "{{ mysql_config_dir }}/role.cnf"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: apply mysql role settings
+
+- name: Zastosuj ustawienia roli przed dalszymi zadaniami
+  ansible.builtin.meta: flush_handlers

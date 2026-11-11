@@ -1,3 +1,24 @@
 ---
-# Wypełniane w US1 (specs/002-etap2-mysql-replikacja/tasks.md).
-[]
+# Odpowiednik mysql_secure_installation (FR-004), idempotentnie; tylko na źródle — na replikę
+# zmiany docierają replikacją (konta zakłada wyłącznie źródło).
+- name: Usuń konta anonimowe
+  ansible.mysql.mysql_user:
+    name: ""
+    host_all: true
+    state: absent
+
+- name: Usuń konta root spoza localhost
+  ansible.mysql.mysql_user:
+    name: root
+    host: "{{ item }}"
+    state: absent
+  loop:
+    - "%"
+    - 127.0.0.1
+    - "::1"
+    - "{{ ansible_facts['hostname'] | default(inventory_hostname) }}"
+
+- name: Usuń testową bazę danych
+  ansible.mysql.mysql_db:
+    name: test
+    state: absent

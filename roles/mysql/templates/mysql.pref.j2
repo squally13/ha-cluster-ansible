@@ -1,0 +1,5 @@
+# {{ ansible_managed }}
+# Dokładne przypięcie wersji MySQL (research R1, ADR 0010) — zmiana tylko przez mysql_version
+Package: mysql-*
+Pin: version {{ mysql_version }}
+Pin-Priority: 1001

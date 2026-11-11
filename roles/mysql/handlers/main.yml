@@ -34,5 +34,5 @@
       source:
         - SET GLOBAL super_read_only = OFF
         - SET GLOBAL read_only = OFF
-        - SET GLOBAL clone_valid_donor_list = ''
+        - SET GLOBAL clone_valid_donor_list = DEFAULT
   listen: apply mysql role settings

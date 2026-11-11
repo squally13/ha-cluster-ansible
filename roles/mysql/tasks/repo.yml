@@ -1,3 +1,42 @@
 ---
-# Wypełniane w US1 (specs/002-etap2-mysql-replikacja/tasks.md).
-[]
+# Odcisk klucza: BCA4 3417 C3B4 85DD 128E C6D4 B7B3 B788 A8D3 785C (MySQL Release Engineering,
+# ważny do 2027-10-23 — docs/notes.md, ADR 0010)
+- name: Utwórz katalog kluczy APT
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Zainstaluj klucz podpisu repozytorium MySQL
+  ansible.builtin.copy:
+    src: "{{ mysql_apt_key_file }}"
+    dest: /etc/apt/keyrings/mysql.asc
+    owner: root
+    group: root
+    mode: "0644"
+  register: mysql_repo_key
+
+- name: Dodaj repozytorium MySQL
+  ansible.builtin.template:
+    src: mysql.sources.j2
+    dest: /etc/apt/sources.list.d/mysql.sources
+    owner: root
+    group: root
+    mode: "0644"
+  register: mysql_repo_sources
+
+- name: Przypnij wersję pakietów MySQL
+  ansible.builtin.template:
+    src: mysql.pref.j2
+    dest: /etc/apt/preferences.d/mysql.pref
+    owner: root
+    group: root
+    mode: "0644"
+
+# Odświeżenie cache tylko po zmianie źródła — inaczej każdy przebieg sięgałby do sieci.
+- name: Odśwież listę pakietów po zmianie repozytorium
+  ansible.builtin.apt:
+    update_cache: true
+  when: mysql_repo_key is changed or mysql_repo_sources is changed

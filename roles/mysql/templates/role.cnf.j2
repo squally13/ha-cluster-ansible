@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+# Ustawienia zależne od roli węzła ({{ mysql_role }}) — dynamiczne: po zmianie stosowane przez
+# SET GLOBAL bez restartu (handler „apply mysql role settings”), a przy starcie czytane z tego pliku.
+[mysqld]
+{% if mysql_role == 'replica' %}
+read_only                      = ON
+super_read_only                = ON
+clone_valid_donor_list         = {{ mysql_source_address }}:{{ mysql_port }}
+{% else %}
+read_only                      = OFF
+super_read_only                = OFF
+{% endif %}

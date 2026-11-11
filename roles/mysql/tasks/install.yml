@@ -1,3 +1,37 @@
 ---
-# Wypełniane w US1 (specs/002-etap2-mysql-replikacja/tasks.md).
-[]
+# Puste hasło roota w debconf → postinst pakietu ustawia root@localhost na auth_socket
+# (research R3, ADR 0015) — brak hasła administratora bazy.
+- name: Ustaw puste hasło roota MySQL w debconf (uwierzytelnianie gniazdem)
+  ansible.builtin.debconf:
+    name: mysql-community-server
+    question: "{{ item }}"
+    value: ""
+    vtype: password
+  loop:
+    - mysql-community-server/root-pass
+    - mysql-community-server/re-root-pass
+  no_log: true
+  # Tylko przed pierwszą instalacją (stat z config.yml): odczyt debconf przy kolejnych przebiegach
+  # wymagałby debconf-get-selections (pakiet debconf-utils), a odpowiedź i tak już nie ma znaczenia.
+  when: not mysql_binary.stat.exists
+
+- name: Zainstaluj serwer MySQL w przypiętej wersji i sterownik Pythona
+  ansible.builtin.apt:
+    name:
+      - "mysql-server={{ mysql_version }}"
+      - "mysql-community-server={{ mysql_version }}"
+      - "mysql-client={{ mysql_version }}"
+      - python3-pymysql
+    state: present
+
+# Przy każdym przebiegu (tani odczyt): obejmuje też pierwszą instalację, gdy szablony powstały
+# bez validate:, bo nie było jeszcze mysqld.
+- name: Sprawdź pełną konfigurację serwera
+  ansible.builtin.command: mysqld --validate-config --user=mysql
+  changed_when: false
+
+- name: Włącz i uruchom usługę MySQL
+  ansible.builtin.service:
+    name: mysql
+    enabled: true
+    state: started

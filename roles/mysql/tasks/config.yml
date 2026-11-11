@@ -1,3 +1,29 @@
 ---
-# Wypełniane w US1 (specs/002-etap2-mysql-replikacja/tasks.md).
-[]
+# mysqld.cnf wgrywany PRZED instalacją pakietu: pakiet uruchamia serwer od razu, więc pierwszy
+# start ma już GTID i server_id (ryzyko z plan.md). role.cnf — dopiero PO instalacji
+# (role_drift.yml): super_read_only=ON z repliki blokuje `mysqld --initialize` w postinst
+# (brak tabel systemowych — docs/notes.md). Przy pierwszej instalacji nie ma jeszcze
+# mysqld, więc plik powstaje bez validate:, a pełną konfigurację sprawdza install.yml zaraz po
+# instalacji pakietu (zasada III — tasks.md T023).
+- name: Sprawdź, czy serwer MySQL jest zainstalowany
+  ansible.builtin.stat:
+    path: /usr/sbin/mysqld
+  register: mysql_binary
+
+- name: Utwórz katalog konfiguracji MySQL
+  ansible.builtin.file:
+    path: "{{ mysql_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Wygeneruj konfigurację serwera MySQL
+  ansible.builtin.template:
+    src: mysqld.cnf.j2
+    dest: "{{ mysql_config_dir }}/mysqld.cnf"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: "{{ 'mysqld --defaults-file=%s --validate-config --user=mysql' if mysql_binary.stat.exists else omit }}"
+  notify: restart mysql
