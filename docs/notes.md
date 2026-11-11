@@ -222,3 +222,31 @@ Po próbie 3/3:
   `nft -c -f /etc/nftables.conf` mimo to.
 - ~~R11~~ — sprawdzone: cache apt nie daje `changed` w drugim przebiegu; `needrestart -b -k`
   działa (kod 0, `NEEDRESTART-KSTA:`).
+
+## Etap 2
+
+### Organizacja pracy (T001)
+
+| Issue | Historyjka |
+|---|---|
+| #11 | US1 — Baza danych na obu węzłach `db` |
+| #12 | US2 — Replikacja `db1` → `db2` |
+| #13 | US3 — Idempotencja przy żywej replikacji |
+| #14 | US4 — Replika tylko do odczytu |
+| #15 | US5 — Baza i konto aplikacji |
+| #16 | US6 — Ręczne promowanie repliki (runbook) |
+| #17 | US7 — Dokumentacja i ADR |
+| #18 | Etap 2: zamknięcie etapu |
+
+Label `etap-2`. Project nr 2 przemianowany na „HA cluster” — jedna tablica dla całego projektu,
+etap rozróżnia label (`etap-1`, `etap-2`, …).
+
+### 2026-11-11 — weryfikacja pozycji [WERYFIKACJA] na starcie (T002)
+
+- `mysql-community-server` w indeksie `trixie/mysql-8.4-lts`: **8.4.13-1debian13** (bez zmian
+  względem research R1) — `mysql_version` zostaje.
+- `ansible.mysql` na Galaxy: **5.2.0** (najnowsza).
+- Klucz `RPM-GPG-KEY-mysql-2025`: `BCA4 3417 C3B4 85DD 128E C6D4 B7B3 B788 A8D3 785C`
+  (MySQL Release Engineering), **ważny do 2027-10-23**; `gpg --verify` na
+  `dists/trixie/InRelease` → `Good signature` tym kluczem. Po 2027-10-23 `apt update` zgłosi
+  wygasły klucz — trzeba podmienić `roles/mysql/files/mysql-2025.asc` (wpisane w ADR 0010).
