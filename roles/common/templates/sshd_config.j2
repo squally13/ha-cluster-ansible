@@ -1,0 +1,27 @@
+# Zarządzane przez Ansible — nie edytuj ręcznie
+# Cały plik z szablonu, bez Include sshd_config.d — nic z obrazu nie nadpisze ustawień (R9).
+
+Port 22
+AddressFamily inet
+ListenAddress 0.0.0.0
+
+# Uwierzytelnianie: wyłącznie klucze, bez roota (FR-008)
+PermitRootLogin no
+PubkeyAuthentication yes
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+UsePAM yes
+
+# Kto i skąd (FR-008, FR-008a): admin tylko z węzła sterującego (ops — z hosta),
+# vagrant tylko z kanału NAT Vagranta.
+{% if inventory_hostname in groups['ops'] %}
+AllowUsers {{ common_admin_user }}@{{ common_ssh_host_address }} vagrant@{{ common_mgmt_ssh_source }}
+{% else %}
+AllowUsers {{ common_admin_user }}@{{ common_control_node_address }} vagrant@{{ common_mgmt_ssh_source }}
+{% endif %}
+
+X11Forwarding no
+PrintMotd no
+AcceptEnv LANG LC_*
+Subsystem sftp /usr/lib/openssh/sftp-server

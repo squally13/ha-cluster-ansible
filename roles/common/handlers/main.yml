@@ -1,0 +1,32 @@
+---
+# Handlery roli common — kontrakt: contracts/common-role.md. Uruchamiane w kolejności z tego pliku.
+
+- name: Restart ssh
+  ansible.builtin.service:
+    name: ssh
+    state: restarted
+  listen: restart ssh
+
+# Walidacja przed restartem: błędna konfiguracja przerywa przebieg, działający chronyd zostaje.
+- name: Sprawdź konfigurację chrony przed restartem
+  ansible.builtin.command: chronyd -p -f /etc/chrony/chrony.conf
+  changed_when: false
+  listen: restart chrony
+
+- name: Restart chrony
+  ansible.builtin.service:
+    name: chrony
+    state: restarted
+  listen: restart chrony
+
+# Dwa kroki pod jednym `listen`: najpierw walidacja całości (z fragmentami innych ról),
+# potem atomowe załadowanie. Błąd walidacji przerywa przebieg, a działające reguły zostają.
+- name: Sprawdź reguły nftables przed przeładowaniem
+  ansible.builtin.command: nft -c -f /etc/nftables.conf
+  changed_when: false
+  listen: reload firewall
+
+- name: Reload nftables
+  ansible.builtin.command: nft -f /etc/nftables.conf
+  changed_when: true
+  listen: reload firewall

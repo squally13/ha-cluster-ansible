@@ -1,0 +1,25 @@
+---
+# Hooki przed commitem (R12). Uruchamiaj z WSL na /mnt/c/... — ansible-lint nie działa natywnie na Windowsie.
+# Pliki zarządzane przez narzędzia (spec-kit, Claude Code) nie są poprawiane przez hooki
+exclude: ^(\.specify|\.claude)/
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: [--fix=lf]
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+  - repo: https://github.com/ansible/ansible-lint
+    rev: v26.11.0
+    hooks:
+      - id: ansible-lint
+        additional_dependencies:
+          - ansible-core==2.21.6

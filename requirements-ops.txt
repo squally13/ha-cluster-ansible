@@ -1,0 +1,2 @@
+# Ansible na węźle ops (venv /opt/ansible) — dokładne przypięcie (R7, weryfikacja: docs/notes.md)
+ansible-core==2.21.6

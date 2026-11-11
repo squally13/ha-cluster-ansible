@@ -1,0 +1,85 @@
+---
+- name: US5 — czas, strefa czasowa, aktualizacje i narzędzia
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: US5.1 Odczytaj stan synchronizacji czasu
+      ansible.builtin.command: chronyc tracking
+      register: us5_tracking
+      changed_when: false
+
+    - name: US5.1 Sprawdź synchronizację czasu (|System time| < 0,5 s)
+      vars:
+        us5_offset: >-
+          {{ us5_tracking.stdout | regex_search('System time\s*:\s*([0-9.]+)', '\1') | first | float }}
+      ansible.builtin.assert:
+        that:
+          - us5_tracking.stdout is search('Leap status\s*:\s*Normal')
+          - us5_offset | float < 0.5
+        fail_msg: "{{ inventory_hostname }}: przesunięcie {{ us5_offset }} s"
+        quiet: true
+
+    - name: US5.3 Odczytaj strefę czasową
+      ansible.builtin.command: timedatectl show -p Timezone --value
+      register: us5_timezone
+      changed_when: false
+      failed_when: us5_timezone.stdout != 'UTC'
+
+    - name: US5.3 Odczytaj konfigurację unattended-upgrades
+      ansible.builtin.slurp:
+        src: /etc/apt/apt.conf.d/50unattended-upgrades
+      register: us5_unattended
+
+    - name: US5.3 Sprawdź, że automatycznie instalowane są tylko poprawki bezpieczeństwa
+      vars:
+        us5_unattended_text: "{{ us5_unattended.content | b64decode }}"
+        us5_origins: "{{ us5_unattended_text | regex_findall('\"(origin=[^\"]*)\"') }}"
+      ansible.builtin.assert:
+        that:
+          - us5_origins | length > 0
+          - us5_origins | reject('search', '-security') | list | length == 0
+          - "'Unattended-Upgrade::Automatic-Reboot \"false\";' in us5_unattended_text"
+        fail_msg: "{{ inventory_hostname }}: wzorce {{ us5_origins }}"
+        quiet: true
+
+    - name: US5.4 Odczytaj konfigurację needrestart
+      ansible.builtin.command: grep -rhF "$nrconf{restart} = 'l';" /etc/needrestart/
+      register: us5_needrestart_conf
+      changed_when: false
+
+    - name: US5.4 Sprawdź sygnał „wymagany restart”
+      ansible.builtin.command: needrestart -b -k
+      become: true
+      register: us5_needrestart
+      changed_when: false
+      failed_when: us5_needrestart.rc != 0 or 'NEEDRESTART-KSTA:' not in us5_needrestart.stdout
+
+    - name: US5.3 Odczytaj stan usług systemowych
+      ansible.builtin.service_facts:
+
+    - name: US5.3 Sprawdź, że okresowe aktualizacje APT faktycznie działają
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services[item].status != 'masked'
+        fail_msg: "{{ inventory_hostname }}: {{ item }} jest zamaskowana"
+        quiet: true
+      loop:
+        - apt-daily.service
+        - apt-daily-upgrade.service
+
+    - name: US5.3 Sprawdź aktywne timery aktualizacji APT
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+      loop:
+        - apt-daily.timer
+        - apt-daily-upgrade.timer
+      register: us5_apt_timers
+      failed_when: us5_apt_timers.status.ActiveState != 'active'
+
+    - name: US5.5 Sprawdź narzędzia bazowe
+      ansible.builtin.shell: command -v vim htop curl rsync tcpdump
+      args:
+        executable: /bin/bash
+      register: us5_tools
+      changed_when: false
+      failed_when: us5_tools.rc != 0 or (us5_tools.stdout_lines | length) != 5

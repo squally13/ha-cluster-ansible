@@ -1,0 +1,21 @@
+---
+- name: Ustaw strefę czasową
+  community.general.timezone:
+    name: "{{ common_timezone }}"
+
+- name: Skonfiguruj chrony
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: /etc/chrony/chrony.conf
+    owner: root
+    group: root
+    mode: "0644"
+  # Bez validate: profil AppArmor chronyd blokuje odczyt pliku tymczasowego Ansible
+  # (docs/notes.md). Walidacja w handlerze, przed restartem — jak dla nftables.
+  notify: restart chrony
+
+- name: Włącz i uruchom chrony
+  ansible.builtin.service:
+    name: chrony
+    enabled: true
+    state: started

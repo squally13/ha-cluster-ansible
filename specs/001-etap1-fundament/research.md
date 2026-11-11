@@ -88,7 +88,10 @@ pierwsze zadanie etapu potwierdza je i ewentualnie koryguje decyzję (z wpisem w
 ## R7. Ansible i kolekcje (wersje)
 
 - **Decyzja**: `ansible-core` w najnowszej wspieranej (nie-EOL) gałęzi zgodnej z Pythonem 3.13 z
-  Debiana 13, przypięty dokładnie (`==X.Y.Z`) w `requirements-ops.txt`; docelowo gałąź 2.20.
+  Debiana 13, przypięty dokładnie (`==X.Y.Z`) w `requirements-ops.txt`. **Po weryfikacji
+  (2026-11-09, `docs/notes.md`)**: `ansible-core==2.21.6` — najnowsza łatka stabilnej gałęzi;
+  2.22.0 odrzucone jako świeże wydanie `.0`. Kolekcje: `ansible.posix 2.2.2`,
+  `community.general 14.0.0`; `ansible-lint 26.11.0`.
   Kolekcje z dokładnymi wersjami w `requirements.yml`: `ansible.posix`, `community.general`
   (strefa czasowa), a od kolejnych etapów `community.mysql`, `community.docker`.
   **[WERYFIKACJA]** gałąź i zgodność `ansible-lint` z tą gałęzią.

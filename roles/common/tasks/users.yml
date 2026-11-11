@@ -1,0 +1,26 @@
+---
+- name: Utwórz konto administracyjne
+  ansible.builtin.user:
+    name: "{{ common_admin_user }}"
+    shell: /bin/bash
+    create_home: true
+
+- name: Ustaw klucz publiczny labu jako jedyny klucz konta administracyjnego
+  ansible.posix.authorized_key:
+    user: "{{ common_admin_user }}"
+    key: "{{ lookup('ansible.builtin.file', common_admin_pubkey_path) }}"
+    exclusive: true
+
+- name: Nadaj kontu administracyjnemu sudo bez hasła
+  ansible.builtin.template:
+    src: sudoers_admin.j2
+    dest: /etc/sudoers.d/admin
+    owner: root
+    group: root
+    mode: "0440"
+    validate: visudo -cf %s
+
+- name: Zablokuj hasło konta vagrant
+  ansible.builtin.user:
+    name: vagrant
+    password_lock: true

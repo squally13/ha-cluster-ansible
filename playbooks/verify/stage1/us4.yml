@@ -1,0 +1,106 @@
+---
+- name: US4 — polityka firewalla na każdym węźle
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: US4.5 Sprawdź politykę drop łańcucha input
+      ansible.builtin.command: nft list chain inet filter input
+      become: true
+      register: us4_input_chain
+      changed_when: false
+      failed_when: us4_input_chain.rc != 0 or 'policy drop' not in us4_input_chain.stdout
+
+    - name: US4.5 Odczytaj stan usług systemowych
+      ansible.builtin.service_facts:
+
+    - name: US4.5 Sprawdź, że nftables startuje z systemem
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['nftables.service'] is defined
+          - ansible_facts.services['nftables.service'].status == 'enabled'
+        fail_msg: "{{ inventory_hostname }}: nftables.service nie jest włączony"
+        quiet: true
+
+- name: US4 — blokada portów (nasłuch testowy na db1)
+  hosts: db1
+  gather_facts: false
+  vars:
+    us4_db_address: "{{ hostvars['db1'].ansible_host }}"
+    us4_probe_hosts: [db1, web1, ops]
+    us4_probe: /tmp/ha-homelab-tcp_probe.py
+  tasks:
+    - name: US4 Testy połączeń ze sprzątaniem
+      block:
+        - name: Skopiuj sondę TCP na węzły testowe
+          ansible.builtin.copy:
+            src: "{{ playbook_dir | dirname }}/files/tcp_probe.py"
+            dest: "{{ us4_probe }}"
+            mode: "0755"
+          delegate_to: "{{ item }}"
+          loop: "{{ us4_probe_hosts }}"
+          changed_when: false
+
+        - name: Uruchom tymczasowy nasłuch TCP 3306 na db1
+          ansible.builtin.command:
+            argv:
+              - python3
+              - -c
+              - |
+                import socket, time
+                s = socket.socket()
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.bind(("0.0.0.0", 3306))
+                s.listen(16)
+                time.sleep(120)
+              - ha-homelab-us4-listener
+          async: 150
+          poll: 0
+          changed_when: false
+
+        - name: Poczekaj na nasłuch 3306
+          ansible.builtin.wait_for:
+            host: 127.0.0.1
+            port: 3306
+            timeout: 15
+
+        - name: US4.1 Połączenie web1 → db1:3306 jest porzucane
+          ansible.builtin.command: python3 {{ us4_probe }} {{ us4_db_address }} 3306 3
+          delegate_to: web1
+          register: us4_web_to_db
+          changed_when: false
+          failed_when: "'RESULT=timeout' not in us4_web_to_db.stdout"
+
+        - name: US4.2 Lokalne połączenie na db1:3306 działa
+          ansible.builtin.command: python3 {{ us4_probe }} 127.0.0.1 3306 3
+          register: us4_db_local
+          changed_when: false
+          failed_when: "'RESULT=connected' not in us4_db_local.stdout"
+
+        - name: US4.3 SSH web1 → db1 jest porzucane
+          ansible.builtin.command: python3 {{ us4_probe }} {{ us4_db_address }} 22 3
+          delegate_to: web1
+          register: us4_web_to_db_ssh
+          changed_when: false
+          failed_when: "'RESULT=timeout' not in us4_web_to_db_ssh.stdout"
+
+        - name: US4.3 SSH ops → db1 działa
+          ansible.builtin.command: python3 {{ us4_probe }} {{ us4_db_address }} 22 3
+          delegate_to: ops
+          register: us4_ops_to_db_ssh
+          changed_when: false
+          failed_when: "'RESULT=connected' not in us4_ops_to_db_ssh.stdout"
+
+      always:
+        - name: Zatrzymaj tymczasowy nasłuch
+          ansible.builtin.command: pkill -f ha-homelab-us4-listener
+          register: us4_pkill
+          changed_when: false
+          failed_when: us4_pkill.rc not in [0, 1]
+
+        - name: Usuń sondę TCP z węzłów testowych
+          ansible.builtin.file:
+            path: "{{ us4_probe }}"
+            state: absent
+          delegate_to: "{{ item }}"
+          loop: "{{ us4_probe_hosts }}"
+          changed_when: false

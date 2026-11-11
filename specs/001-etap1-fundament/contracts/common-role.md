@@ -17,6 +17,7 @@ mogą polegać na stanie opisanym w sekcji „Gwarancje”.
 | `common_mgmt_ssh_source` | `10.0.2.2` | źródło kanału zarządzania Vagranta |
 | `common_vip_address` | `192.168.56.10` | wpis `vip` w `/etc/hosts` |
 | `common_initial_upgrade` | `true` | jednorazowa pełna aktualizacja przy pierwszej konfiguracji |
+| `common_grub_install_devices` | `[/dev/sda]` | dysk GRUB ustawiany w debconf przed jednorazową aktualizacją (obraz Bento pamięta dysk maszyny budującej) |
 
 Nadpisywanie wyłącznie w `inventories/lab/group_vars/` i `host_vars/`.
 

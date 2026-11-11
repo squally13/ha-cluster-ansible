@@ -67,7 +67,7 @@ Oczekiwany wynik: wszystkie zadania `ok`, `failed=0`. Najważniejsze linie:
 | US4.6 kanał zarządzania | `vagrant ssh db1 -c hostname`; `vagrant halt web2; vagrant up web2` | `db1`; maszyna zatrzymana i uruchomiona bez błędów |
 | US4.5 trwałość po restarcie | `vagrant reload db1`, potem z ops: `ansible db1 -b -m command -a "nft list chain inet filter input"` | `policy drop`, reguła SSH z 192.168.56.5 |
 | US3.5 zły szablon SSH | wprowadź błąd w szablonie `sshd_config.j2`, `ansible-playbook playbooks/site.yml --tags ssh` | zadanie `failed` z błędem walidacji `sshd -t`; nadal możesz się zalogować; po cofnięciu błędu `changed=0` |
-| US2.3 dryf | `vagrant ssh lb1 -c "sudo sed -i '1i # dryf' /etc/ssh/sshd_config"`, potem `site.yml` | `changed=1` na `lb1`, kolejny przebieg `changed=0` |
+| US2.3 dryf | `vagrant ssh lb1 -c "sudo sed -i '1i # dryf' /etc/ssh/sshd_config"`, potem `site.yml` | `changed=2` na `lb1` (szablon + handler `Restart ssh`), kolejny przebieg `changed=0` |
 | US5.2 zegar | `vagrant ssh web1 -c "sudo date -s '-2 min'"`, odczekaj ≤ 5 min, `chronyc tracking` | \|System time\| < 0,5 s |
 | US5.4 sygnał restartu | `ansible all -b -m command -a "needrestart -b -k"` (sprawdzane też automatycznie w `--tags us5`) | kod 0 i linia `NEEDRESTART-KSTA: 1` (restart niewymagany) lub 2/3 (wymagany); węzeł nie restartuje się sam |
 | US5.4 symulacja (opcjonalnie) | na `web1`: instalacja dodatkowego pakietu jądra, potem `needrestart -b -k`; na koniec `vagrant destroy -f web1 && vagrant up web1` i `site.yml --limit web1` | `NEEDRESTART-KSTA: 2` lub `3`; `uptime` pokazuje, że nie było restartu |

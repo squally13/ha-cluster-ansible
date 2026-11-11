@@ -1,0 +1,39 @@
+---
+# Interfejs roli common — kontrakt: specs/001-etap1-fundament/contracts/common-role.md
+# Nadpisywanie wyłącznie w inventories/lab/group_vars/ i host_vars/.
+
+# Pakiety bazowe (FR-006)
+common_packages:
+  - vim
+  - htop
+  - curl
+  - chrony
+  - rsync
+  - tcpdump
+  - needrestart
+  - unattended-upgrades
+  - nftables
+
+# Czas (FR-009, R10)
+common_timezone: UTC
+common_ntp_pools:
+  - debian.pool.ntp.org
+
+# Konto administracyjne (FR-007, R5) — klucz publiczny labu czytany na ops z folderu współdzielonego
+common_admin_user: admin
+common_admin_pubkey_path: "{{ playbook_dir }}/../.lab/ssh/id_ed25519.pub"
+
+# Źródła SSH (FR-008, FR-011, R9)
+common_control_node_address: "{{ hostvars[groups['ops'][0]].ansible_host }}"
+common_ssh_host_address: 192.168.56.1
+common_mgmt_ssh_source: 10.0.2.2
+
+# Adres wirtualny klastra (wpis „vip” w /etc/hosts)
+common_vip_address: 192.168.56.10
+
+# Jednorazowa pełna aktualizacja przy pierwszej konfiguracji (FR-012, R11)
+common_initial_upgrade: true
+# Dysk(i) instalacji GRUB ustawiane przed jednorazową aktualizacją (obraz Bento pamięta dysk z
+# maszyny budującej). Pusta lista = nie zmieniaj.
+common_grub_install_devices:
+  - /dev/sda

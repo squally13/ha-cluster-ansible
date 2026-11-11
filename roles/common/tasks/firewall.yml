@@ -1,0 +1,34 @@
+---
+- name: Utwórz katalog fragmentów reguł firewalla
+  ansible.builtin.file:
+    path: /etc/nftables.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# Wzorzec include zawsze ma co najmniej jedno dopasowanie (ryzyko z plan.md: pusty katalog).
+- name: Utwórz bazowy fragment reguł firewalla
+  ansible.builtin.template:
+    src: nftables.d-00-common.nft.j2
+    dest: /etc/nftables.d/00-common.nft
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload firewall
+
+- name: Wygeneruj bazowy zestaw reguł nftables
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: "0755"
+    validate: nft -c -f %s
+  notify: reload firewall
+
+- name: Włącz usługę nftables
+  ansible.builtin.service:
+    name: nftables
+    enabled: true
+    state: started
