@@ -1,0 +1,6 @@
+---
+# Węzeł bazy (etap 2, data-model.md). server_id: > 0, unikalny w grupie db.
+# Rola: dokładnie jeden host db ma „source”; zmiana ról tylko wg runbooka
+# docs/runbooks/mysql-promote-replica.md.
+mysql_server_id: 2
+mysql_role: replica

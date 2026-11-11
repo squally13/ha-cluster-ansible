@@ -1,0 +1,46 @@
+---
+# Warstwa bazy danych (etap 2). Kontrakt: specs/002-etap2-mysql-replikacja/contracts/mysql-roles.md.
+# Moduły ansible.mysql łączą się przez gniazdo jako root (auth_socket, ADR 0015) — stąd module_defaults.
+
+- name: Kontrola zgodności ról bazy z repozytorium (FR-018)
+  hosts: db
+  become: true
+  tags: [mysql, replication]
+  module_defaults:
+    group/ansible.mysql.all:
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+  tasks:
+    - name: Sprawdź, czy MySQL jest zainstalowany
+      ansible.builtin.stat:
+        path: /usr/sbin/mysqld
+      register: db_mysqld
+
+    - name: Porównaj rolę z inventory ze stanem bazy
+      ansible.builtin.include_role:
+        name: mysql_replication
+        tasks_from: check.yml
+      when: db_mysqld.stat.exists
+
+- name: Baza danych (MySQL)
+  hosts: db
+  become: true
+  module_defaults:
+    group/ansible.mysql.all:
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+  # Handlery to zasób playa — fragment firewalla roli mysql powiadamia „reload firewall” z roli common.
+  handlers:
+    - name: Handlery roli common
+      ansible.builtin.import_tasks: ../roles/common/handlers/main.yml
+  roles:
+    - role: mysql
+      tags: [mysql]
+
+- name: Replikacja
+  hosts: db
+  become: true
+  module_defaults:
+    group/ansible.mysql.all:
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+  roles:
+    - role: mysql_replication
+      tags: [replication]

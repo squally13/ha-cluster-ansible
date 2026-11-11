@@ -1,0 +1,5 @@
+---
+# Hasła kont MySQL — wyłącznie odwołania do zaszyfrowanego group_vars/all/vault.yml (zasada IV).
+mysql_repl_password: "{{ vault_mysql_repl_password }}"
+mysql_clone_password: "{{ vault_mysql_clone_password }}"
+mysql_app_password: "{{ vault_mysql_app_password }}"

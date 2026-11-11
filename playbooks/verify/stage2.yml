@@ -1,0 +1,22 @@
+---
+# Testy akceptacyjne etapu 2 — kontrakt: specs/002-etap2-mysql-replikacja/contracts/verification.md
+# Nie jest częścią site.yml; dane testowe i pliki tymczasowe są sprzątane (block/always).
+#   ansible-playbook playbooks/verify/stage2.yml             # wszystkie testy
+#   ansible-playbook playbooks/verify/stage2.yml --tags us2  # jedna historyjka
+#   ansible-playbook playbooks/verify/stage1.yml playbooks/verify/stage2.yml  # regresja (SC-009)
+# US3 (idempotencja) wymaga przebiegu site.yml — test ręczny w quickstart.md (krok 2).
+- name: US1 — baza danych na węzłach db
+  ansible.builtin.import_playbook: stage2/us1.yml
+  tags: [us1]
+
+- name: US2 — replikacja db1 → db2
+  ansible.builtin.import_playbook: stage2/us2.yml
+  tags: [us2]
+
+- name: US4 — replika tylko do odczytu
+  ansible.builtin.import_playbook: stage2/us4.yml
+  tags: [us4]
+
+- name: US5 — baza i konto aplikacji
+  ansible.builtin.import_playbook: stage2/us5.yml
+  tags: [us5]

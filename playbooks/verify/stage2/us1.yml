@@ -1,0 +1,6 @@
+---
+# Wypełniane w US1 (specs/002-etap2-mysql-replikacja/tasks.md).
+- name: US1 — testy jeszcze nienapisane
+  hosts: db
+  gather_facts: false
+  tasks: []

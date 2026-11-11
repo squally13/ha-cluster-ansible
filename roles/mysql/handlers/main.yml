@@ -1,0 +1,38 @@
+---
+# Handlery roli mysql — kontrakt: contracts/mysql-roles.md. Kolejność wykonania = kolejność w pliku.
+
+# Walidacja pełnej konfiguracji przed restartem (zasada III); błąd przerywa przebieg,
+# a działający serwer zostaje na starej konfiguracji.
+- name: Sprawdź konfigurację MySQL przed restartem
+  ansible.builtin.command: mysqld --validate-config --user=mysql
+  changed_when: false
+  listen: restart mysql
+
+- name: Restart mysql
+  ansible.builtin.service:
+    name: mysql
+    state: restarted
+  listen: restart mysql
+
+- name: Poczekaj, aż MySQL przyjmuje połączenia
+  ansible.builtin.wait_for:
+    host: "{{ ansible_host }}"
+    port: "{{ mysql_port }}"
+    timeout: 120
+  listen: restart mysql
+
+# Ustawienia z role.cnf są dynamiczne — stosowane bez restartu (research R4), np. po promowaniu.
+- name: Zastosuj ustawienia roli węzła bez restartu
+  ansible.mysql.mysql_query:
+    query: "{{ mysql_role_settings_queries[mysql_role] }}"
+  vars:
+    mysql_role_settings_queries:
+      replica:
+        - "SET GLOBAL clone_valid_donor_list = '{{ mysql_source_address }}:{{ mysql_port }}'"
+        - SET GLOBAL read_only = ON
+        - SET GLOBAL super_read_only = ON
+      source:
+        - SET GLOBAL super_read_only = OFF
+        - SET GLOBAL read_only = OFF
+        - SET GLOBAL clone_valid_donor_list = ''
+  listen: apply mysql role settings

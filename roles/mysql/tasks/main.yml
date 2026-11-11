@@ -1,0 +1,45 @@
+---
+# Kolejność (contracts/mysql-roles.md): szablony konfiguracji PRZED pakietem (pakiet startuje serwer
+# od razu przy instalacji), restart przed operacjami SQL, operacje SQL tylko na źródle.
+- name: Sprawdź zmienne węzła bazy
+  ansible.builtin.import_tasks: assert.yml
+  tags: [mysql-install, mysql-config, mysql-accounts]
+
+- name: Repozytorium pakietów Oracle
+  ansible.builtin.import_tasks: repo.yml
+  tags: [mysql-install]
+
+- name: Konfiguracja serwera
+  ansible.builtin.import_tasks: config.yml
+  tags: [mysql-config]
+
+- name: Instalacja serwera
+  ansible.builtin.import_tasks: install.yml
+  tags: [mysql-install]
+
+- name: Zastosuj zaległe restarty przed operacjami SQL
+  ansible.builtin.meta: flush_handlers
+
+- name: Zgodność trybu tylko do odczytu z rolą węzła
+  ansible.builtin.import_tasks: role_drift.yml
+  tags: [mysql-config]
+
+- name: Firewall — port bazy
+  ansible.builtin.import_tasks: firewall.yml
+  tags: [firewall]
+
+# Na replice żadnych zapisów SQL (errant GTID, research R6/R12) — konta i baza app docierają replikacją.
+- name: Odpowiednik mysql_secure_installation
+  ansible.builtin.import_tasks: secure.yml
+  when: mysql_role == 'source'
+  tags: [mysql-accounts]
+
+- name: Konta replikacji i klonowania
+  ansible.builtin.import_tasks: accounts.yml
+  when: mysql_role == 'source'
+  tags: [mysql-accounts]
+
+- name: Baza i konto aplikacji
+  ansible.builtin.import_tasks: app.yml
+  when: mysql_role == 'source'
+  tags: [mysql-accounts]

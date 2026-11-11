@@ -1,0 +1,37 @@
+---
+# Rola mysql — kontrakt: specs/002-etap2-mysql-replikacja/contracts/mysql-roles.md,
+# zmienne: data-model.md. Nadpisywanie w inventories/lab/group_vars/db.yml lub host_vars/dbN.yml.
+
+# Wersja przypięta dokładnie (research R1, ADR 0010). Indeks repo Oracle trzyma tylko najnowszą
+# łatkę — po wydaniu nowej instalacja zatrzyma się błędem; wtedy podbij tę wartość.
+mysql_version: "8.4.13-1debian13"
+mysql_apt_component: mysql-8.4-lts
+mysql_apt_uri: http://repo.mysql.com/apt/debian
+mysql_apt_key_file: mysql-2025.asc
+
+# Wymagane w host_vars: mysql_server_id (> 0, unikalny), mysql_role (source | replica).
+
+# Pamięć (FR-006): 25% RAM węzła z inventory (1,5 GB → 384M).
+mysql_innodb_buffer_pool_size: "{{ ((vagrant_memory | default(1536) | int) * 0.25) | int }}M"
+mysql_max_connections: 100
+# Retencja dzienników binarnych (FR-007): 7 dni
+mysql_binlog_expire_logs_seconds: 604800
+
+mysql_port: 3306
+mysql_socket: /var/run/mysqld/mysqld.sock
+mysql_config_dir: /etc/mysql/mysql.conf.d
+
+# Baza i konta (FR-009, FR-014); hasła z group_vars/db.yml → Vault
+mysql_app_database: app
+mysql_app_user: app
+mysql_repl_user: repl
+mysql_clone_user: clone
+
+# Topologia wyliczana z inventory — nie nadpisywać
+mysql_source_hosts: >-
+  {{ groups['db'] | map('extract', hostvars) | selectattr('mysql_role', 'defined')
+     | selectattr('mysql_role', 'equalto', 'source') | map(attribute='inventory_hostname') | list }}
+mysql_source_host: "{{ mysql_source_hosts | first | default('') }}"
+mysql_source_address: "{{ hostvars[mysql_source_host].ansible_host if mysql_source_host else '' }}"
+mysql_db_addresses: "{{ groups['db'] | map('extract', hostvars, 'ansible_host') | list }}"
+mysql_web_addresses: "{{ groups['web'] | default([]) | map('extract', hostvars, 'ansible_host') | list }}"

@@ -1,0 +1,9 @@
+---
+- name: Stan węzła i zgodność z repozytorium
+  ansible.builtin.import_tasks: check.yml
+
+- name: Zasilenie pustej repliki klonem ze źródła
+  ansible.builtin.import_tasks: clone.yml
+
+- name: Konfiguracja i start replikacji
+  ansible.builtin.import_tasks: replication.yml

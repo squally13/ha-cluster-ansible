@@ -1,0 +1,20 @@
+---
+# Kontrola przed jakąkolwiek zmianą na węzłach (etap 2, research R7): bez hasła do Vaulta
+# przebieg kończy się tutaj, a nie w połowie konfiguracji.
+- name: Kontrola wstępna — sekrety z Ansible Vault
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tags: [always]
+  tasks:
+    # Bez no_log: assert z quiet nie wypisuje wartości, a no_log ukryłby też fail_msg.
+    - name: Sprawdź, że sekrety z Vaulta są dostępne
+      ansible.builtin.assert:
+        that:
+          - vault_mysql_repl_password | default('') | length > 0
+          - vault_mysql_clone_password | default('') | length > 0
+          - vault_mysql_app_password | default('') | length > 0
+        fail_msg: >-
+          Brak sekretów z inventories/lab/group_vars/all/vault.yml. Sprawdź ANSIBLE_VAULT_PASSWORD_FILE
+          (na ops: /vagrant/.vault_pass) albo utwórz własny Vault: tools/init-vault.sh (WSL, katalog repo).
+        quiet: true

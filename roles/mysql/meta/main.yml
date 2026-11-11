@@ -1,0 +1,13 @@
+---
+galaxy_info:
+  role_name: mysql
+  namespace: ha_homelab
+  author: squally13
+  description: MySQL 8.4 LTS z repozytorium Oracle — instalacja, konfiguracja, konta, firewall (etap 2)
+  license: MIT
+  min_ansible_version: "2.21"
+  platforms:
+    - name: Debian
+      versions:
+        - trixie
+dependencies: []

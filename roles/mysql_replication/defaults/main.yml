@@ -1,0 +1,26 @@
+---
+# Rola mysql_replication — kontrakt: contracts/mysql-roles.md, macierz zgodności: data-model.md.
+
+# Nazwa hosta, który wolno zasilić klonem MIMO danych (runbook: przyłączenie starego źródła).
+# Tylko z wiersza poleceń: -e mysql_replication_reseed=db1
+mysql_replication_reseed: ""
+# Ile sekund czekać, aż oba wątki replikacji będą działać
+mysql_replication_wait_seconds: 60
+mysql_replication_connect_retry: 10
+mysql_replication_retry_count: 86400
+
+mysql_replication_port: 3306
+mysql_replication_socket: /var/run/mysqld/mysqld.sock
+# Muszą odpowiadać kontom tworzonym przez rolę mysql (mysql_repl_user, mysql_clone_user, mysql_app_user)
+mysql_replication_user: repl
+mysql_replication_password: "{{ mysql_repl_password }}"
+mysql_replication_clone_user: clone
+mysql_replication_clone_password: "{{ mysql_clone_password }}"
+mysql_replication_account_names: [repl, clone, app]
+
+# Topologia z inventory — nie nadpisywać
+mysql_replication_source_host: >-
+  {{ groups['db'] | map('extract', hostvars) | selectattr('mysql_role', 'defined')
+     | selectattr('mysql_role', 'equalto', 'source') | map(attribute='inventory_hostname') | first | default('') }}
+mysql_replication_source_address: >-
+  {{ hostvars[mysql_replication_source_host].ansible_host if mysql_replication_source_host else '' }}

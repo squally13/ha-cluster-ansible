@@ -1,0 +1,8 @@
+---
+# Stan węzła + macierz zgodności (data-model.md). Używane także przez pierwszy play playbooks/db.yml,
+# przed rolą mysql — niezgodny węzeł nie dostaje nowej konfiguracji (FR-018).
+- name: Odczytaj stan bazy na węźle
+  ansible.builtin.import_tasks: state.yml
+
+- name: Porównaj rolę z inventory ze stanem bazy
+  ansible.builtin.import_tasks: consistency.yml
