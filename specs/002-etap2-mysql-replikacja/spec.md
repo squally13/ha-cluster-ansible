@@ -249,9 +249,10 @@ mówi wprost, że przełączenie bazy jest ręczne.
 
 ### Edge Cases
 
-- **Pierwszy start bazy a hasło administratora**: instalacja pakietu może ustawić losowe lub
-  puste hasło administratora; pierwszy przebieg MUSI ustawić hasło z magazynu sekretów, a drugi
-  nie może zgłaszać zmiany hasła (częsty powód `changed>0`).
+- **Pierwszy start bazy a konto administratora**: instalacja pakietu nie może zostawić konta
+  administracyjnego z pustym hasłem dostępnym po sieci; konto uwierzytelnia się gniazdem
+  lokalnym (FR-004), więc kolejne przebiegi nie mają hasła do porównywania (częsty powód
+  `changed>0`).
 - **Brak hasła do magazynu sekretów na `ops`**: przebieg MUSI zakończyć się od razu czytelnym
   błędem, zanim cokolwiek zostanie zmienione na węzłach.
 - **Sekrety w logach**: zadania operujące na hasłach nie mogą wypisywać ich w wyjściu przebiegu
@@ -293,8 +294,9 @@ mówi wprost, że przełączenie bazy jest ręczne.
   w zmiennych hosta; GTID i dziennik binarny w formacie wierszowym są włączone na obu węzłach
   (każdy może zostać źródłem).
 - **FR-004**: Konfiguracja MUSI wykonywać idempotentnie odpowiednik „secure installation”:
-  hasło konta administracyjnego z magazynu sekretów, brak kont anonimowych, brak testowej bazy,
-  konto administracyjne dostępne tylko lokalnie.
+  brak kont anonimowych, brak testowej bazy, konto administracyjne dostępne tylko lokalnie i
+  uwierzytelniane tożsamością systemowego administratora węzła (gniazdo lokalne), bez hasła
+  (doprecyzowane w planie — research R3: brak sekretu do przechowywania i wycieku).
 - **FR-005**: Serwer MUSI nasłuchiwać na adresie węzła w sieci labu; Ansible zarządza bazą przez
   połączenie lokalne na węźle, niezależne od reguł sieciowych.
 - **FR-006**: Ustawienia pamięci serwera MUSZĄ być dopasowane do pamięci węzła `db` z inventory
@@ -306,7 +308,8 @@ mówi wprost, że przełączenie bazy jest ręczne.
 - **FR-008**: Rola węzła bazy (`source`/`replica`) MUSI wynikać z repozytorium (zmienne
   inventory), a nie z kolejności hostów.
 - **FR-009**: Na źródle MUSI istnieć dedykowane konto replikacji z wyłącznie uprawnieniami
-  replikacji, dostępne tylko z adresu repliki (adres wyliczany z inventory).
+  replikacji, dostępne tylko z adresów węzłów grupy `db` (wyliczanych z inventory) — każdy z
+  nich może po promowaniu zostać repliką (doprecyzowane w planie — research R5).
 - **FR-010**: Na replice konfiguracja MUSI ustawiać źródło replikacji (adres `db1` w sieci labu,
   konto replikacji, automatyczne pozycjonowanie GTID) i uruchamiać replikację **tylko wtedy, gdy
   replikacja nie jest jeszcze skonfigurowana**; działająca replikacja nie jest zatrzymywana,
@@ -331,7 +334,7 @@ mówi wprost, że przełączenie bazy jest ręczne.
 
 **Sekrety**
 
-- **FR-015**: Wszystkie hasła etapu (administrator bazy, replikacja, aplikacja) MUSZĄ być w
+- **FR-015**: Wszystkie hasła etapu (replikacja, zasilanie repliki, aplikacja) MUSZĄ być w
   zaszyfrowanym magazynie sekretów w repozytorium; zmienne jawne odwołują się do nich pośrednio.
   Plik z hasłem do magazynu jest poza Gitem, a dokumentacja opisuje, jak go utworzyć na `ops`.
   Zadania operujące na hasłach nie wypisują ich w logach.
@@ -379,8 +382,8 @@ mówi wprost, że przełączenie bazy jest ręczne.
 
 - **Węzeł bazy**: host grupy `db`; atrybuty: identyfikator serwera, rola (`source`/`replica`),
   adres w sieci labu, limit pamięci.
-- **Konto administracyjne bazy**: tylko lokalne; hasło w magazynie sekretów.
-- **Konto replikacji**: tylko uprawnienia replikacji; dozwolone źródło = adres repliki.
+- **Konto administracyjne bazy**: tylko lokalne; uwierzytelnianie gniazdem, bez hasła.
+- **Konto replikacji**: tylko uprawnienia replikacji; dozwolone źródła = adresy węzłów `db`.
 - **Konto aplikacji `app`**: pełne uprawnienia do bazy `app`; dozwolone źródła = adresy węzłów
   `web`.
 - **Baza `app`**: tworzona na źródle, replikowana; schemat dostarcza etap 3.
