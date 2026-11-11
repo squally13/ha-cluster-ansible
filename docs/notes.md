@@ -250,3 +250,26 @@ etap rozróżnia label (`etap-1`, `etap-2`, …).
   (MySQL Release Engineering), **ważny do 2027-10-23**; `gpg --verify` na
   `dists/trixie/InRelease` → `Good signature` tym kluczem. Po 2027-10-23 `apt update` zgłosi
   wygasły klucz — trzeba podmienić `roles/mysql/files/mysql-2025.asc` (wpisane w ADR 0010).
+
+### 2026-11-11 — fundament etapu 2 (T009–T018)
+
+- **`tools/init-vault.sh` nie działa na `ops`**: `Permission denied` przy zapisie `.vault_pass` —
+  repo na `ops` to folder współdzielony `uid=vagrant`, `dmode=0755`, `fmode=0644`, czyli tylko do
+  odczytu dla `admin` (świadomie, ADR 0008). Skrypt uruchamiany w WSL na hoście, `ops` tylko czyta.
+- **`.vault_pass` w WSL traktowany jak skrypt**: `Problem running vault password script ...
+  Exec format error` — na `/mnt/c` każdy plik ma bit wykonywalności, a Ansible uruchamia
+  „wykonywalny” plik hasła. Skrypt podaje hasło przez kopię `0600` w `mktemp`. Na `ops` plik ma
+  `0644` i działa wprost. Edycja Vaulta z WSL: `ansible-vault edit --vault-password-file
+  <(cat .vault_pass) ...` albo kopia jak w skrypcie.
+- **Lint i zaszyfrowany Vault**: `yaml[document-start]` w `vault.yml` → plik wykluczony w
+  `.ansible-lint` i `.yamllint`. Przy okazji `ansible-lint` instaluje kolekcje do `.ansible/` w
+  repo — dodane do `.gitignore`.
+- **Luka w kontrakcie firewalla z etapu 1**: handlery są zasobem playa, więc `notify: reload
+  firewall` z roli w innym playu nie znajduje handlera roli `common`. `playbooks/db.yml` importuje
+  `roles/common/handlers/main.yml` w sekcji `handlers` — kolejne etapy muszą robić to samo.
+- **`ansible.mysql` 5.2.0 ma moduł `mysql_clone`** (od 5.1.0) — sam czeka na restart odbiorcy;
+  użyty zamiast `mysql_query` (research R6 zaktualizowany).
+- Checkpoint T018: `site.yml` 7/7 `changed=0` (preflight + puste role); regresja
+  `verify/stage1.yml --tags us4` na porcie 9999 zielona; bez `ANSIBLE_VAULT_PASSWORD_FILE` →
+  `Attempting to decrypt but no vault secrets found` w `preflight`, z nieistniejącym plikiem →
+  `The vault password file ... was not found` — w obu przypadkach zero zmian na węzłach.
