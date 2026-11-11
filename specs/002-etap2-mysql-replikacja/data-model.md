@@ -26,7 +26,7 @@ Pochodne (wyliczane, nie wpisywane): `mysql_replication_source_host` = jedyny ho
 |---|---|---|
 | `mysql_version` | `8.4.13-1debian13` | dokładne przypięcie (R1, ADR 0010) |
 | `mysql_apt_component` | `mysql-8.4-lts` | |
-| `mysql_innodb_buffer_pool_size` | `256M` | FR-006 |
+| `mysql_innodb_buffer_pool_size` | `"{{ ((vagrant_memory \| default(1536) \| int) * 0.25) \| int }}M"` | FR-006: 25% RAM węzła z inventory (1,5 GB → 384M) |
 | `mysql_max_connections` | `100` | FR-006 |
 | `mysql_binlog_expire_logs_seconds` | `604800` | FR-007 (7 dni) |
 | `mysql_app_database` | `app` | FR-014 |
@@ -67,10 +67,18 @@ baza `test`. Baza `app`: `utf8mb4`, pusta (schemat w etapie 3).
 | `gtid_executed` | `@@GLOBAL.gtid_executed` | historia transakcji GTID |
 | `read_only` / `super_read_only` | zmienne globalne | tryb tylko do odczytu |
 
-**Węzeł „pusty”** = `is_replica == false` **i** `user_schemas == []` **i** `gtid_executed == ''`.
+**Węzeł „pusty”** = `is_replica == false` **i** `user_schemas == []` **i** brak kont
+`repl`, `clone`, `app` w `mysql.user`. `gtid_executed` **nie** jest kryterium: skrypt
+instalacyjny pakietu (`INSTALL PLUGIN auth_socket`, `ALTER USER root`) wykonuje się już przy
+naszej konfiguracji z `gtid_mode=ON`, więc świeża instalacja ma niepuste `gtid_executed` — klon i
+tak je nadpisuje.
 Tylko pusty węzeł (albo jawnie wskazany `mysql_replication_reseed`) może zostać zasilony klonem.
 
-## Macierz zgodności (FR-018, kontrola przed zmianami w roli `mysql_replication`)
+## Macierz zgodności (FR-018)
+
+Kontrola wykonywana **dwa razy**: w pierwszym playu `db.yml` (przed rolą `mysql`, która wgrywa
+`role.cnf` i mogłaby zmienić tryb tylko do odczytu) — tylko na węzłach z zainstalowanym MySQL —
+oraz na początku roli `mysql_replication` (po instalacji, przed klonem).
 
 | `mysql_role` (repo) | Stan węzła | Akcja |
 |---|---|---|
@@ -79,7 +87,7 @@ Tylko pusty węzeł (albo jawnie wskazany `mysql_replication_reseed`) może zost
 | `replica` | pusty | zasil klonem ze źródła → `changereplication` → `startreplica` |
 | `replica` | `is_replica == true`, `Source_Host` = adres źródła z repo, brak błędów | OK — nic nie rób |
 | `replica` | `is_replica == true`, błąd w `Last_*_Error` | **fail** z treścią błędu (FR-013), bez resetu |
-| `replica` | `is_replica == true`, `Source_Host` ≠ źródło z repo | **fail**: „replikuje z innego źródła niż w repo” (chyba że `reseed`) |
+| `replica` | `is_replica == true`, `Source_Host` ≠ `hostvars[źródło].ansible_host` | **fail**: „replikuje z innego źródła niż w repo” (chyba że `reseed`) |
 | `replica` | `is_replica == false`, **niepusty** | **fail**: „węzeł ma dane i nie replikuje — czy był promowany? zaktualizuj inventory albo `-e mysql_replication_reseed=<host>`” |
 | `replica` | dowolny, host == `mysql_replication_reseed` | klon ze źródła (nadpisuje dane) → replikacja |
 

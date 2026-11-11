@@ -48,14 +48,15 @@ Kolejność w `main.yml`: `assert` → `repo` → `config` (szablony **przed** p
 
 | Krok | Co | Gdzie |
 |---|---|---|
-| 1. Stan | `getreplica`, `user_schemas`, `gtid_executed` → fakty `mysql_replication_state` | wszystkie `db` |
+| 1. Stan | `getreplica`, `user_schemas`, konta `repl`/`clone`/`app` w `mysql.user` → fakty `mysql_replication_state` (`check.yml` = `state.yml` + `consistency.yml`) | wszystkie `db` |
 | 2. Zgodność | macierz z [data-model.md](../data-model.md) → `fail` z instrukcją przy niezgodności | wszystkie `db` |
 | 3. Klon | tylko replika pusta lub `reseed`: `CLONE INSTANCE FROM 'clone'@'<źródło>':3306 ... REQUIRE SSL` (`no_log`), potem `wait_for` na port i ponowny odczyt stanu | replika |
-| 4. Replikacja | tylko gdy `is_replica == false`: `changereplication` (`primary_host` = adres źródła, `primary_auto_position: true`, `primary_ssl: true`, konto `repl`) + `startreplica` | replika |
+| 4. Replikacja | tylko gdy `is_replica == false`: `changereplication` (`primary_host` = adres źródła, `primary_auto_position: true`, `primary_ssl: true`, `primary_connect_retry: 10`, konto `repl`), `mysql_query` `CHANGE REPLICATION SOURCE TO SOURCE_RETRY_COUNT = 86400`, `startreplica` | replika |
 | 5. Sprawdzenie | `getreplica` do skutku (≤ 60 s): `Replica_IO_Running: Yes`, `Replica_SQL_Running: Yes` | replika |
 
 **Gwarancje**:
 
+0. Pierwszy play `db.yml` uruchamia `check.yml` **przed** rolą `mysql` — niezgodny węzeł (np. promowany bez zmiany repo) nie dostaje nowego `role.cnf` ani `SET GLOBAL read_only`.
 1. Działająca replikacja nie jest zatrzymywana, resetowana ani przekonfigurowywana (FR-010).
 2. Klon nigdy nie nadpisuje węzła z danymi bez `mysql_replication_reseed` (FR-012).
 3. Niezgodność repo ↔ stan kończy przebieg **przed** zmianą (FR-018).
@@ -70,6 +71,18 @@ Kolejność w `main.yml`: `assert` → `repo` → `config` (szablony **przed** p
 ## Playbook `playbooks/db.yml`
 
 ```yaml
+- name: Kontrola zgodności ról bazy z repozytorium (FR-018)
+  hosts: db
+  become: true
+  tags: [mysql, replication]
+  tasks:
+    - name: Sprawdź, czy MySQL jest zainstalowany
+      ansible.builtin.stat: { path: /usr/sbin/mysqld }
+      register: db_mysqld
+    - name: Porównaj rolę z inventory ze stanem bazy
+      ansible.builtin.include_role: { name: mysql_replication, tasks_from: check.yml }
+      when: db_mysqld.stat.exists
+
 - name: Baza danych (MySQL)
   hosts: db
   become: true

@@ -68,7 +68,9 @@ Brak pozycji NEEDS CLARIFICATION — rozstrzygnięte w [research.md](research.md
 
 **Wynik bramki przed Phase 0**: PASS.
 
-**Ponowna ocena po Phase 1**: PASS. Doprecyzowania spec wynikające z projektu (bez naruszeń):
+**Ponowna ocena po Phase 1**: PASS (z jednym jawnym odstępstwem — Complexity Tracking).
+Po `/speckit-analyze` poprawiono: definicję węzła „pustego” (H1), kolejność kontroli zgodności
+w `db.yml` (H2), pamięć z `vagrant_memory` (M4), ponawianie połączenia repliki (M2). Doprecyzowania spec wynikające z projektu (bez naruszeń):
 FR-004 — konto administracyjne przez gniazdo zamiast hasła z Vaulta (bezpieczniejsze, R3);
 FR-009 — konta `repl`/`clone` z adresów obu węzłów `db` (wymagane po promowaniu, R5). Spec
 zaktualizowana. Playbooki weryfikacyjne nie należą do `site.yml`.
@@ -117,7 +119,7 @@ specs/002-etap2-mysql-replikacja/
 ├── playbooks/
 │   ├── site.yml                     # preflight → common → db
 │   ├── preflight.yml                # NOWY: assert sekretów Vault
-│   ├── db.yml                       # NOWY: role mysql, mysql_replication
+│   ├── db.yml                       # NOWY: kontrola zgodności → mysql → mysql_replication
 │   └── verify/
 │       ├── stage1/us4.yml           # ZMIANA: port 9999 (FR-021)
 │       ├── stage2.yml + stage2/{us1,us2,us4,us5}.yml
@@ -163,4 +165,6 @@ ręczne (wymagają przebiegu `site.yml`), dlatego brak `stage2/us3.yml`.
 
 ## Complexity Tracking
 
-Brak naruszeń konstytucji — sekcja nie ma zastosowania.
+| Odstępstwo | Dlaczego potrzebne | Prostsza/zgodna alternatywa odrzucona, bo |
+|---|---|---|
+| Zasada IV wymienia „hasło root MySQL” wśród sekretów w Vault, a `root` bazy nie ma hasła (`auth_socket`) | Konto tylko lokalne z natury; brak sekretu do wycieku; brak `changed` przy porównaniu skrótu `caching_sha2_password` (zasada II) | hasło `root` w Vault wymaga dodatkowego pliku z sekretem na węźle (`~/.my.cnf`) i `update_password: on_create` (rozjazd Vault ↔ baza po zmianie hasła). Odstępstwo opisane w ADR 0015; zakres: tylko konto `root@localhost`; usunięcie: brak planu — decyzja docelowa |

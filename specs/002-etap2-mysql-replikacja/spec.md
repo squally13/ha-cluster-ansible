@@ -213,8 +213,9 @@ na `db2`, uruchomić playbook.
    część runbooka dotyczącą starego źródła, **Then** po zmianie ról w repozytorium i przebiegu głównego playbooka `db1` jest repliką
    `db2`: oba wątki replikacji działają, `db1` ma wszystkie transakcje `db2` (także te zapisane
    po promowaniu), jest w trybie tylko do odczytu, a drugi przebieg daje `changed=0`. Transakcje,
-   które `db1` miał, a które nie zdążyły trafić na `db2` przed awarią, są wykrywane i opisane w
-   runbooku (rozbieżny `db1` jest zasilany od nowa ze `db2` zamiast dołączać z konfliktem).
+   które `db1` miał, a które nie zdążyły trafić na `db2` przed awarią, są wykrywane (porównanie
+   zbiorów GTID) i zapisywane przed przyłączeniem, a `db1` jest zawsze zasilany od nowa ze `db2`
+   zamiast dołączać z konfliktem.
 4. **Given** układ po scenariuszu 3, **When** Administrator wykonuje ten sam runbook w drugą
    stronę (promowanie `db1`), **Then** wraca układ wyjściowy (`db1` źródło, `db2` replika)
    bez utraty danych i bez dodatkowych kroków spoza runbooka.
@@ -277,6 +278,10 @@ mówi wprost, że przełączenie bazy jest ręczne.
   kroku runbooka — przebieg NIE MOŻE zdegradować `db2` do repliki; ma zatrzymać się z
   komunikatem o niezgodności stanu z repozytorium (FR-018).
 - **Restart całego labu** (`vagrant halt` / `vagrant up`): replikacja wraca sama (US2.5).
+- **Powrót starego źródła po promowaniu**: uruchomiony `db1` startuje z konfiguracją źródła
+  (zapisywalny), dopóki przebieg nie przyłączy go jako repliki — runbook MUSI określić kolejność
+  (repo zaktualizowane przed startem `db1`, przyłączenie zaraz po starcie), a od etapu 3 —
+  odcięcie aplikacji od starego źródła (ryzyko split-brain).
 
 ## Requirements *(mandatory)*
 
@@ -299,7 +304,7 @@ mówi wprost, że przełączenie bazy jest ręczne.
   (doprecyzowane w planie — research R3: brak sekretu do przechowywania i wycieku).
 - **FR-005**: Serwer MUSI nasłuchiwać na adresie węzła w sieci labu; Ansible zarządza bazą przez
   połączenie lokalne na węźle, niezależne od reguł sieciowych.
-- **FR-006**: Ustawienia pamięci serwera MUSZĄ być dopasowane do pamięci węzła `db` z inventory
+- **FR-006**: Ustawienia pamięci serwera MUSZĄ być wyliczane z pamięci węzła `db` z inventory
   i jawnie zdefiniowane (z możliwością nadpisania).
 - **FR-007**: Retencja dzienników binarnych MUSI być jawnie zdefiniowana w repozytorium.
 
@@ -363,7 +368,7 @@ mówi wprost, że przełączenie bazy jest ręczne.
 **Testy i regresja**
 
 - **FR-020**: Repozytorium MUSI zawierać playbook weryfikacyjny etapu 2 sprawdzający scenariusze
-  US1–US5 automatycznie (w tym zapis na `db1` → odczyt na `db2`, odrzucony zapis na `db2`,
+  US1, US2, US4 i US5 automatycznie (US3 wymaga przebiegu `site.yml` — test ręczny w quickstart) (w tym zapis na `db1` → odczyt na `db2`, odrzucony zapis na `db2`,
   logowanie konta `app` z `web1`/`web2` i odrzucenie z innego węzła), z danymi testowymi, które
   nie zostają w bazie `app` po teście.
 - **FR-021**: Test firewalla etapu 1 MUSI zostać przeniesiony na port, którego nie otwiera żaden

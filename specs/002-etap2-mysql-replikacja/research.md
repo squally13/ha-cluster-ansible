@@ -54,6 +54,9 @@ kod modułów kolekcji). **[WERYFIKACJA]** = do potwierdzenia w pierwszym przebi
   Instalacja z pustym `root-pass` (debconf ustawiony przed instalacją, `DEBIAN_FRONTEND`
   nieinteraktywny). „Secure installation”: usunięcie kont anonimowych, `root` spoza
   `localhost` i bazy `test` (idempotentnie, `mysql_user`/`mysql_db` z `state: absent`).
+- **Odstępstwo od zapisu konstytucji**: zasada IV wymienia „hasło root MySQL” wśród sekretów w
+  Vault. Brak hasła nie łamie reguły (żaden sekret nie leży poza Vaultem), ale zmienia jej
+  założenie — zgodnie z Governance zapisane jawnie w ADR 0015 i w Complexity Tracking planu.
 - **Uzasadnienie**: brak hasła = brak sekretu do wycieku i brak klasycznego `changed` przy
   `caching_sha2_password` (losowa sól, moduł nie porówna skrótu); konto z natury tylko lokalne
   (FR-004). Doprecyzowuje FR-004 spec (hasło z magazynu → uwierzytelnianie gniazdem) —
@@ -79,8 +82,9 @@ kod modułów kolekcji). **[WERYFIKACJA]** = do potwierdzenia w pierwszym przebi
   **[WERYFIKACJA]** (pakiet nie ma profilu AppArmor, więc problem z etapu 1 z chrony nie
   powinien wystąpić; gdyby walidacja pojedynczego fragmentu nie działała — jak w etapie 1:
   walidacja całości w handlerze przed restartem).
-- **Pamięć (FR-006)**: `innodb_buffer_pool_size` = 256M dla 1,5 GB RAM, `max_connections` 100,
-  wartości w `defaults/` z możliwością nadpisania.
+- **Pamięć (FR-006)**: `innodb_buffer_pool_size` = 25% `vagrant_memory` węzła z inventory
+  (1,5 GB → 384M; reszta dla systemu, buforów połączeń i `performance_schema`),
+  `max_connections` 100; wartości w `defaults/` z możliwością nadpisania.
 - **Retencja binlogów (FR-007)**: `binlog_expire_logs_seconds` = 604800 (7 dni). Nowa replika
   nie zależy od binlogów sprzed klonowania (R6).
 
@@ -97,6 +101,11 @@ kod modułów kolekcji). **[WERYFIKACJA]** = do potwierdzenia w pierwszym przebi
   nie tylko „bieżącej repliki”: po promowaniu role się zamieniają, a konta są już na obu węzłach
   dzięki replikacji. Spełnia cel FR-009 (żaden węzeł spoza `db` nie użyje konta) — spec
   doprecyzowana.
+- **Ponawianie połączenia**: moduł ma `primary_connect_retry` (ustawiamy 10 s), ale nie liczbę
+  prób; domyślne `SOURCE_RETRY_COUNT` w 8.4 to 10 **[WERYFIKACJA]**, czyli replika uruchomiona
+  przed źródłem poddaje się po kilku minutach. Przy konfiguracji (tylko gdy `is_replica` jest
+  fałszywe) dodatkowo `mysql_query`: `CHANGE REPLICATION SOURCE TO SOURCE_RETRY_COUNT = 86400`
+  (≈ 10 dni prób) — restart całego labu w dowolnej kolejności nie zatrzymuje replikacji.
 - **Idempotencja**: `mode: getreplica` przed zmianą; `changereplication`/`startreplica` tylko gdy
   `Is_Replica` jest fałszywe. Jeśli replikacja jest skonfigurowana, ale `Last_IO_Error` lub
   `Last_SQL_Error` nie są puste — `fail` z treścią błędu (FR-013), bez resetu.
@@ -119,6 +128,10 @@ kod modułów kolekcji). **[WERYFIKACJA]** = do potwierdzenia w pierwszym przebi
 - **Jedna ścieżka dla wszystkich przypadków**: replika w świeżym labie także jest klonowana
   (źródło prawie puste). Zaleta: replika nigdy nie ma własnych transakcji (tzw. errant GTID) —
   np. operacji z instalacji pakietu — które blokowałyby późniejsze promowanie.
+- **„Pusty” bez `gtid_executed`** (poprawka po `/speckit-analyze`): skrypt `postinst` pakietu
+  wykonuje `INSTALL PLUGIN`/`ALTER USER` przy naszej konfiguracji z GTID, więc świeża replika ma
+  niepuste `gtid_executed`. Kryterium: brak replikacji, brak schematów użytkownika i brak kont
+  `repl`/`clone`/`app` (te konta tworzy wyłącznie rola na źródle).
 - **Ochrona danych**: klonowanie nigdy nie startuje na węźle z danymi, chyba że Administrator
   jawnie wskaże go zmienną `-e mysql_replication_reseed=<host>` (krok runbooka przy
   przyłączaniu starego źródła — R8).
@@ -156,13 +169,17 @@ kod modułów kolekcji). **[WERYFIKACJA]** = do potwierdzenia w pierwszym przebi
   4. W repo: zamiana `mysql_role` w `host_vars/db1.yml` i `db2.yml`; commit.
   5. `ansible-playbook playbooks/site.yml --limit 'all:!db1'` — `role.cnf` na `db2` zmienia się,
      handler stosuje `SET GLOBAL` (bez restartu); reguły i konta bez zmian.
-  6. Po powrocie `db1`: `ansible-playbook playbooks/site.yml -e mysql_replication_reseed=db1` —
-     `db1` jest zawsze **zasilany od nowa** klonem z `db2` (eliminuje transakcje, które nie
-     dotarły na `db2` przed awarią) i dołącza jako replika.
+  6. Po powrocie `db1` (uruchamiany dopiero, gdy krok 4 jest w repo — `db1` wstaje
+     zapisywalny ze starym `role.cnf`; od etapu 3 aplikacja musi już wskazywać `db2`):
+     najpierw porównanie GTID — na `db1` `SELECT GTID_SUBTRACT(@@gtid_executed, '<gtid_executed
+     z db2>')` → transakcje, które nie dotarły na `db2` przed awarią, zapisywane w
+     `docs/notes.md` (i w zrzucie `db1`); potem `ansible-playbook playbooks/site.yml -e
+     mysql_replication_reseed=db1` — `db1` jest zawsze **zasilany od nowa** klonem z `db2` i
+     dołącza jako replika.
   7. Powrót do układu wyjściowego = ten sam runbook w drugą stronę (planowany: krok 1 zastąpiony
      sprawdzeniem `Seconds_Behind_Source: 0` i zatrzymaniem zapisów).
-- **Ochrona przed przywróceniem starego układu (FR-018)**: rola przed jakąkolwiek zmianą
-  porównuje rolę z inventory ze stanem węzła (macierz w [data-model.md](data-model.md)); przy
+- **Ochrona przed przywróceniem starego układu (FR-018)**: pierwszy play `db.yml` (przed rolą
+  `mysql`, która wgrywa `role.cnf`) porównuje rolę z inventory ze stanem węzła (macierz w [data-model.md](data-model.md)); przy
   niezgodności — `fail` z instrukcją (np. „`db2` przyjmuje zapisy i nie replikuje, a inventory
   mówi `replica` — wykonaj krok 4 runbooka albo użyj `mysql_replication_reseed`”).
 - **Alternatywy**: zawsze wykrywać rolę ze stanu bazy, ignorując inventory (ukrywa stan w
@@ -196,7 +213,9 @@ kod modułów kolekcji). **[WERYFIKACJA]** = do potwierdzenia w pierwszym przebi
 
 ## R12. Kolejność w `site.yml`
 
-- **Decyzja**: `site.yml` = `preflight.yml` → `common.yml` → `db.yml`. `db.yml`: play 1
+- **Decyzja**: `site.yml` = `preflight.yml` → `common.yml` → `db.yml`. `db.yml`: play 0
+  (`hosts: db`, kontrola zgodności `mysql_replication/check.yml` na węzłach z zainstalowanym
+  MySQL — przed jakąkolwiek zmianą konfiguracji, FR-018), play 1
   (`hosts: db`, rola `mysql`: repozytorium, pakiety, konfiguracja, firewall, konta i baza `app`
   **tylko na źródle**), play 2 (`hosts: db`, rola `mysql_replication`: kontrola zgodności,
   klon i replikacja **tylko na replice**). Konta istnieją na źródle, zanim replika spróbuje
