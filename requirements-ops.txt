@@ -1,2 +1,4 @@
 # Ansible na węźle ops (venv /opt/ansible) — dokładne przypięcie (R7, weryfikacja: docs/notes.md)
 ansible-core==2.21.6
+# Sterownik MySQL dla testów logowania z węzłów WWW (etap 2, R11) — ta sama linia co python3-pymysql w Debianie 13
+PyMySQL==1.1.1

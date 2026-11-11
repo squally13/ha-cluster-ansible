@@ -7,3 +7,5 @@
 # Artefakty Ansible i Pythona
 *.retry
 __pycache__/
+# Kolekcje instalowane lokalnie przez ansible-lint
+.ansible/

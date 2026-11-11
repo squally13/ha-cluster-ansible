@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bootstrap węzła sterującego ops (R5, R6): Ansible w venv /opt/ansible, kolekcje, klucz prywatny
-# labu dla admin, ANSIBLE_CONFIG w profilu. Idempotentny.
+# labu dla admin, ANSIBLE_CONFIG i ANSIBLE_VAULT_PASSWORD_FILE w profilu. Idempotentny.
 set -euo pipefail
 
 ADMIN_USER="admin"
@@ -40,4 +40,8 @@ touch "$PROFILE"
 chown "$ADMIN_USER:$ADMIN_USER" "$PROFILE"
 grep -qxF "export ANSIBLE_CONFIG=$REPO/ansible.cfg" "$PROFILE" \
   || echo "export ANSIBLE_CONFIG=$REPO/ansible.cfg" >> "$PROFILE"
+# Hasło do Ansible Vault z pliku poza Gitem (etap 2, R7) — zmienna, nie ansible.cfg, żeby lint w CI
+# nie wymagał hasła; brak pliku kończy przebieg błędem w playbooks/preflight.yml
+grep -qxF "export ANSIBLE_VAULT_PASSWORD_FILE=$REPO/.vault_pass" "$PROFILE" \
+  || echo "export ANSIBLE_VAULT_PASSWORD_FILE=$REPO/.vault_pass" >> "$PROFILE"
 grep -qxF "cd $REPO" "$PROFILE" || echo "cd $REPO" >> "$PROFILE"

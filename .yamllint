@@ -22,3 +22,5 @@ ignore: |
   specs/
   .specify/
   .claude/
+  # zaszyfrowany Ansible Vault (etap 2)
+  inventories/lab/group_vars/all/vault.yml

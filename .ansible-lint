@@ -9,6 +9,8 @@ exclude_paths:
   - .specify/
   - .claude/
   - .github/
+  # Zaszyfrowany Ansible Vault (etap 2, R7) — treść nie jest YAML-em do lintowania
+  - inventories/lab/group_vars/all/vault.yml
 
 # Kolekcje instaluje CI / pre-commit z requirements.yml
 offline: false
