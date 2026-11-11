@@ -273,3 +273,27 @@ etap rozróżnia label (`etap-1`, `etap-2`, …).
   `verify/stage1.yml --tags us4` na porcie 9999 zielona; bez `ANSIBLE_VAULT_PASSWORD_FILE` →
   `Attempting to decrypt but no vault secrets found` w `preflight`, z nieistniejącym plikiem →
   `The vault password file ... was not found` — w obu przypadkach zero zmian na węzłach.
+
+### 2026-11-11 — US1: pierwsza instalacja MySQL (T019–T028)
+
+- Test `verify/stage2.yml --tags us1` przed implementacją: `failed` na `db1`/`db2`
+  (`mysql.service` nie istnieje) — zgodnie z oczekiwaniem.
+- **`role.cnf` przed instalacją psuje replikę**: na `db2` `mysql.service` nie startuje, w
+  `/var/log/mysql/error.log`: `Can't open and lock privilege tables: Table 'mysql.user' doesn't
+  exist`. Przyczyna: `super_read_only=ON` z `role.cnf` obowiązywał już przy `mysqld
+  --initialize-insecure` w postinst pakietu, więc słownik danych powstał bez tabel systemowych.
+  Na `db1` (źródło, `OFF`) instalacja przeszła. Naprawa: przed pakietem tylko `mysqld.cnf`;
+  `role.cnf` w `role_drift.yml` po instalacji i restarcie (+ `flush_handlers`). Maszyny `db1`,
+  `db2` odtworzone od zera.
+- **`SET GLOBAL clone_valid_donor_list = ''`** → błąd 3869 `Invalid Format`. Wartość domyślną
+  przywraca `= DEFAULT`.
+- **Moduł `debconf` przy drugim przebiegu**: `Failed to find required executable
+  "debconf-get-selections"` (pakiet `debconf-utils` nieobecny). Odpowiedź debconf jest potrzebna
+  tylko przed pierwszą instalacją → zadanie `when: not mysql_binary.stat.exists`.
+- **X Plugin** nasłuchiwał na `::` port 33060 (domyślnie w 8.4). Firewall go blokował, ale
+  usługa jest zbędna → `mysqlx = OFF` w `mysqld.cnf`.
+- Wynik: przebieg 2 `db1`/`db2` `changed=0`, `--check --diff` bez różnic, `us1` zielony.
+- US1.4: `BlednaOpcja = 1` w `mysqld.cnf.j2` → `failed to validate`, w wyjściu `unknown variable
+  'BlednaOpcja=1'`; plik na węzłach bez zmian, `mysql` `active` na obu; po cofnięciu `changed=0`.
+  `validate: mysqld --defaults-file=%s --validate-config` działa na pliku tymczasowym (pakiet
+  Oracle nie ma profilu AppArmor) — wariant awaryjny z handlerem niepotrzebny.
